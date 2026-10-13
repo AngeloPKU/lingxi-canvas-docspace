@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" requiredCustomFeatures="data-kd-color-scheme" km_stroke-width="1" km_darkmode="true"><desc>智能对话_对话生成</desc><style>
+    .kd-stroke-width-icon-regular { 
+       stroke-width: var(--kd-stroke-width-icon-regular, 1px)
+    }
+    .kd-color-icon-primary {
+       fill: var(--kd-color-icon-primary, #333333);
+       stroke: var(--kd-color-icon-primary, #333333);
+       km_fill: #333333;
+       km_stroke: #333333;
+       km_darkmode_fill: #C7C7C7;
+       km_darkmode_stroke: #C7C7C7; 
+    }</style><g id="group-0" class="kd-color-icon-primary kd-stroke-width-icon-regular"><path id="Vector 2886" d="M6.5 10.5V12C6.5 12.2761 6.72386 12.5 7 12.5H12.3333C12.4415 12.5 12.5468 12.5351 12.6333 12.6L14.484 13.988C14.4906 13.9929 14.5 13.9882 14.5 13.98V6C14.5 5.72386 14.2761 5.5 14 5.5H11.5M11.5 5.5V10C11.5 10.2761 11.2761 10.5 11 10.5H4.13849C4.04787 10.5 3.95895 10.5246 3.88124 10.5713L1.51514 11.9909C1.50848 11.9949 1.5 11.9901 1.5 11.9823V2C1.5 1.72386 1.72386 1.5 2 1.5H11C11.2761 1.5 11.5 1.72386 11.5 2V5.5Z" stroke-linecap="round" fill="none" vector-effect="non-scaling-stroke" stroke-linejoin="round"/><path id="Vector 2887" d="M4.5 5.5V6.5" stroke-linecap="round" fill="none" vector-effect="non-scaling-stroke" stroke-linejoin="round"/><path id="Vector 2888" d="M6.5 4V8" stroke-linecap="round" fill="none" vector-effect="non-scaling-stroke" stroke-linejoin="round"/><path id="Vector 2889" d="M8.5 5.5V6.5" stroke-linecap="round" fill="none" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></g></svg>

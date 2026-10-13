@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" km_stroke-width="1" km_darkmode="true" requiredCustomFeatures="data-kd-color-scheme"><desc>云_网盘_云端</desc><style>
+    .kd-stroke-width-icon-regular { 
+       stroke-width: var(--kd-stroke-width-icon-regular, 1px)
+    }
+    .kd-color-icon-primary {
+       fill: var(--kd-color-icon-primary, #333333);
+       stroke: var(--kd-color-icon-primary, #333333);
+       km_fill: #333333;
+       km_stroke: #333333;
+       km_darkmode_fill: #C7C7C7;
+       km_darkmode_stroke: #C7C7C7; 
+    }</style><g id="group-0" class="kd-color-icon-primary kd-stroke-width-icon-regular"><path id="Vector" d="M12.4859 6.64077C12.1732 6.54915 11.8423 6.5 11.5 6.5C10.5207 6.5 9.63526 6.90223 9 7.55051M12.4859 6.64077C13.9389 7.0665 15 8.40933 15 10C15 11.933 13.433 13.5 11.5 13.5H4.5C2.567 13.5 1 11.933 1 10C1 8.40933 2.06113 7.0665 3.51413 6.64077C3.69716 4.32344 5.63564 2.5 8 2.5C10.3644 2.5 12.3028 4.32344 12.4859 6.64077Z" stroke-linecap="round" fill="none" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></g></svg>

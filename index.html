@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>灵犀 · 文档空间</title>
+<link rel="stylesheet" href="css/kdesign/tokens.css">
+<link rel="stylesheet" href="css/kdesign/reset.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/kdesign/button.css">
+<link rel="stylesheet" href="css/kdesign/menu.css">
+  <link rel="stylesheet" href="css/kdesign/checkbox.css">
+  <link rel="stylesheet" href="css/kdesign/switch.css">
+<link rel="stylesheet" href="css/docspace.css">
+</head>
+<body>
+<div class="window">
+
+  <!-- ===== 下沉左侧栏 270px ===== -->
+  <aside class="sidebar">
+    <!-- 项目顶部 52px -->
+    <div class="titlebar">
+      <div class="traffic">
+        <span class="tl close"></span><span class="tl mini"></span><span class="tl zoom"></span>
+      </div>
+      <button class="nav-pane-btn" id="btn-collapse" title="收起侧栏">
+        <img src="assets/icons/navigation_pane_down.svg" width="16" height="16" alt="">
+      </button>
+    </div>
+
+    <!-- 灵犀侧栏 -->
+    <div class="side-panel">
+      <div class="logo-row">
+        <span class="logo-name">灵犀</span>
+        <img class="logo-tag" src="assets/icons/tag.svg" width="44" height="18" alt="WPS 灵犀">
+      </div>
+
+      <div class="menu" id="menu"><!-- JS 渲染 --></div>
+
+      <!-- user 56px -->
+      <div class="user-row">
+        <img class="avatar" src="assets/icons/avatar.png" width="28" height="28" alt="">
+        <div class="user-btns">
+          <button class="pill-btn" title="积分">
+            <img src="assets/icons/star_two.svg" width="16" height="16" alt="">
+            <span>1500</span>
+          </button>
+          <button class="round-btn" title="礼物"><img src="assets/icons/gift.svg" width="16" height="16" alt=""></button>
+          <button class="round-btn" title="通知">
+            <img src="assets/icons/bell.svg" width="16" height="16" alt="">
+            <span class="red-dot"></span>
+          </button>
+          <button class="round-btn" id="btn-settings" title="设置"><img src="assets/icons/setup.svg" width="16" height="16" alt=""></button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== Main Section ===== -->
+  <main class="main">
+
+    <!-- 首页 -->
+    <section class="view view-home" id="view-home">
+      <div class="glow"></div>
+      <div class="home-pane">
+        <div class="welcome-row">
+          <img class="welcome-logo" src="assets/icons/灵犀LOGO.svg" width="32" height="32" alt="">
+          <h1 class="welcome-text">你好<span class="w-comma">,</span><span class="w-fz">今天想完成哪件工作?</span></h1>
+        </div>
+
+        <div class="composer-wrap">
+          <div class="composer">
+            <div id="home-attachments" class="ds-attachments" aria-label="已添加文件" hidden></div>
+            <div id="home-selection" class="home-selection" hidden></div>
+            <textarea id="home-input" spellcheck="false" placeholder="描述一个复杂目标，灵犀会规划、执行并汇报进度"></textarea>
+            <div class="composer-bar">
+              <div class="bar-left">
+                <button class="icon-btn" id="home-plus" title="添加"><img src="assets/icons/symbol_cross.svg" width="16" height="16" alt=""></button>
+                <button class="exp-pill" title="专家模式">
+                  <img src="assets/icons/knowledge_graph.svg" width="16" height="16" alt="">
+                  <span>专家模式：开</span>
+                </button>
+                <button class="icon-btn" title="安全保护"><img src="assets/icons/shield.svg" width="16" height="16" alt=""></button>
+              </div>
+              <div class="bar-right">
+                <button class="pro-pill" title="模式">
+                  <span>Pro 模式</span>
+                  <img src="assets/icons/arrow_down_s.svg" width="12" height="12" alt="">
+                </button>
+                <button class="mic-btn" data-send="home" title="发送"><img src="assets/icons/microphone.svg" width="16" height="16" alt=""></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-below">
+          <div class="tabs" id="tabs">
+            <button class="tab active" data-tab="project">项目</button>
+            <button class="tab" data-tab="recent">最近文档</button>
+          </div>
+          <p class="tabs-desc">项目汇聚相同主题的会话与文档，作为你与灵犀对话时的共同上下文。</p>
+          <div class="card-row" id="card-row"><!-- JS 渲染 --></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 对话视图：对话列 + Canvas 分屏 -->
+    <section class="view view-chat" id="view-chat" hidden>
+      <div class="chat-col" id="chat-col">
+        <div class="chat-top">
+          <div class="chat-title-block">
+            <div class="chat-title" id="chat-title">新任务</div>
+            <div class="chat-ai-note">内容由 AI 生成</div>
+          </div>
+          <div class="chat-top-btns">
+            <button class="light-btn round" id="btn-share"><img src="assets/icons/share_to.svg" width="16" height="16" alt=""><span>分享</span></button>
+            <button class="light-btn r8" id="btn-space"><img src="assets/icons/archive.svg" width="16" height="16" alt=""><span>任务空间</span></button>
+          </div>
+        </div>
+
+        <div class="chat-scroll" id="chat-scroll">
+          <div class="feed" id="feed"><!-- JS 渲染消息 --></div>
+        </div>
+
+        <div class="chat-bottom">
+          <div class="status-row" id="status-row">
+            <img src="assets/icons/lingxi_logo_s.svg" width="20" height="20" alt="">
+            <span class="status-text" id="status-text">灵犀已就绪</span>
+            <img class="status-arrow" src="assets/icons/arrow_right_s.svg" width="16" height="16" alt="">
+          </div>
+          <div class="composer-wrap" id="chat-composer-wrap">
+            <div class="composer">
+              <div class="composer-input" id="chat-input" contenteditable="true" spellcheck="false" data-placeholder="描述一个复杂目标，灵犀会规划、执行并汇报进度"></div>
+              <div class="composer-bar">
+                <div class="bar-left">
+                  <button class="icon-btn" title="添加"><img src="assets/icons/symbol_cross.svg" width="16" height="16" alt=""></button>
+                  <button class="exp-pill" title="专家模式">
+                    <img src="assets/icons/knowledge_graph.svg" width="16" height="16" alt="">
+                    <span>专家模式：开</span>
+                  </button>
+                  <button class="icon-btn" title="安全保护"><img src="assets/icons/shield.svg" width="16" height="16" alt=""></button>
+                </div>
+                <div class="bar-right">
+                  <button class="pro-pill" title="模式">
+                    <span>Pro 模式</span>
+                    <img src="assets/icons/arrow_down_s.svg" width="12" height="12" alt="">
+                  </button>
+                  <button class="mic-btn" data-send="chat" title="发送"><img src="assets/icons/microphone.svg" width="16" height="16" alt=""></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Canvas 分屏面板（规格取自 Figma 21:3389 / 21:3999） ===== -->
+      <aside class="canvas-panel" id="canvas-panel" hidden>
+        <!-- 第一行：文件 tab + 关闭 / 全屏 / 收起侧栏 -->
+        <div class="canvas-row canvas-row1">
+          <div class="canvas-row-left">
+            <div class="canvas-tabs" id="canvas-tabs"><!-- JS 渲染 --></div>
+            <button class="cv-icon-btn" id="btn-canvas-close" title="关闭"><img src="assets/icons/symbol_cross.svg" width="16" height="16" alt=""></button>
+          </div>
+          <div class="canvas-row-right">
+            <button class="cv-icon-btn" id="btn-canvas-expand" title="全屏显示"><img src="assets/icons/screen_expand.svg" width="16" height="16" alt=""></button>
+            <button class="cv-icon-btn" id="btn-canvas-sidebar" title="收起侧栏"><img src="assets/icons/sidebar_left.svg" width="16" height="16" alt=""></button>
+          </div>
+        </div>
+        <!-- 第二行：文件名 + 分享/下载/更多 -->
+        <div class="canvas-row canvas-row2">
+          <div class="canvas-file">
+            <img id="canvas-file-icon" src="assets/icons/wps_format_s.svg" width="16" height="16" alt="">
+            <span id="canvas-file-name"></span>
+          </div>
+          <div class="canvas-row-right">
+            <button class="kd-button kd-button-primary kd-button-m" id="btn-preview-add-chat" hidden><span class="kd-button-prefix-icon" id="preview-add-icon"></span><span class="kd-button-children">添加到对话</span></button>
+            <button class="cv-icon-btn circle-bg" id="btn-canvas-share" title="分享"><img src="assets/icons/share_to.svg" width="16" height="16" alt=""></button>
+            <button class="cv-save-btn" id="btn-canvas-save" title="保存"><img src="assets/icons/save.svg" width="14" height="14" alt=""><span>保存</span></button>
+            <button class="cv-icon-btn" id="btn-canvas-download" title="下载"><img src="assets/icons/download.svg" width="16" height="16" alt=""></button>
+            <button class="cv-icon-btn" id="btn-canvas-more" title="更多"><img src="assets/icons/more.svg" width="16" height="16" alt=""></button>
+          </div>
+        </div>
+        <!-- 置顶工具栏：按文档类型渲染（KDesign 规范：底板 #F5F5F5、按钮 Medium 28px） -->
+        <div class="canvas-toolbar" id="canvas-toolbar"><!-- JS 渲染 --></div>
+        <!-- 文档内容区 -->
+        <div class="canvas-editbar" id="canvas-editbar" hidden>
+          <span class="ce-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6.2521 2.02338C7.01671 0.664083 8.97379 0.664081 9.7384 2.02338L15.7422 12.0196C16.4921 13.3528 15.5145 15.0001 13.9848 15.0001H2.00486C0.475212 15.0001 -0.488216 13.3528 0.261714 12.0196L6.2521 2.02338Z" fill="#E2651A"/><path fill-rule="evenodd" clip-rule="evenodd" d="M8 5C8.55228 5 9 5.44772 9 6V9C9 9.55228 8.55228 10 8 10C7.44772 10 7 9.55228 7 9V6C7 5.44772 7.44772 5 8 5ZM7 12C7 11.4477 7.44772 11 8 11C8.55228 11 9 11.4477 9 12C9 12.5523 8.55228 13 8 13C7.44772 13 7 12.5523 7 12Z" fill="white"/></svg></span>
+          <span class="ce-text" id="canvas-editbar-text"></span>
+        </div>
+        <div class="canvas-content" id="canvas-content"><!-- JS 渲染 --></div>
+        <!-- 全屏模式：悬浮紧凑输入框容器（composer 节点搬入） -->
+        <div class="canvas-float-composer" id="canvas-float-composer" hidden>
+          <button class="fc-hide" id="fc-hide" title="隐藏输入框"><img src="assets/icons/arrow_down_s.svg" width="12" height="12" alt=""></button>
+        </div>
+        <!-- 全屏模式：底部热区 + 显示输入框按钮 -->
+        <div class="canvas-float-showzone" id="canvas-float-showzone" hidden>
+          <button class="fc-show" id="fc-show"><img src="assets/icons/arrow_up_s.svg" width="12" height="12" alt=""><span>显示输入框</span></button>
+        </div>
+        <!-- 全屏模式：单条流式回复气泡（回复落点 B） -->
+        <div class="canvas-float-reply" id="canvas-float-reply" hidden>
+          <div class="fr-bar" id="fr-bar" hidden>
+            <span>当前消息</span>
+            <div class="fr-bar-actions">
+              <button class="kd-button kd-button-light kd-button-sm preview-open-chat" hidden><span class="kd-button-children">打开完整对话</span><span class="kd-button-suffix-icon preview-open-icon"></span></button>
+              <button class="fr-toggle" id="fr-expand" title="展开"><img src="assets/icons/arrow_up_s.svg" width="14" height="14" alt=""></button>
+            </div>
+          </div>
+          <div class="fr-body" id="fr-body">
+            <div class="fr-head"><button class="kd-button kd-button-light kd-button-sm preview-open-chat" hidden><span class="kd-button-children">打开完整对话</span><span class="kd-button-suffix-icon preview-open-icon"></span></button><button class="fr-collapse" id="fr-collapse" title="收起"><img src="assets/icons/arrow_down_s.svg" width="14" height="14" alt=""></button></div>
+            <div class="fr-stream" id="fr-stream"></div>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- 文档空间：目录列表与独立文件预览标签 -->
+    <section class="view view-docspace" id="view-docspace" hidden>
+      <div class="ds-tabs" id="ds-tabs" role="tablist" aria-label="文档空间标签页"></div>
+      <div class="ds-workspace" id="ds-workspace" role="tabpanel">
+        <nav class="ds-directory" id="ds-directory" aria-label="文档目录"></nav>
+        <section class="ds-list-pane" aria-label="文件列表">
+          <header class="ds-breadcrumb" id="ds-breadcrumb" aria-label="当前位置"></header>
+          <div class="ds-table-wrap">
+            <div class="ds-table-head">
+              <label class="kd-checkbox ds-checkbox-slot" title="选择当前列表中的文件"><span class="kd-checkbox-input"><input class="kd-checkbox-original" type="checkbox" id="ds-select-all" aria-label="选择当前列表中的文件"><span class="kd-checkbox-inner" aria-hidden="true"></span></span></label>
+              <div class="ds-name-column"><button class="ds-filter" id="ds-filter" aria-haspopup="menu" aria-expanded="false"><span>全部类型</span><img src="assets/docspace/42-10672-imgArrowDown.svg" alt=""></button></div>
+              <button class="ds-date-column ds-sort" id="ds-sort" title="按最近修改时间排序">最近修改<span id="ds-sort-mark"></span></button>
+              <span class="ds-size-column">大小</span><span class="ds-actions-column"></span>
+            </div>
+            <div class="ds-rows" id="ds-rows" role="list" aria-label="文件和文件夹"></div>
+          </div>
+          <div class="ds-composer-wrap composer-wrap">
+            <div class="composer">
+              <div id="ds-attachments" class="ds-attachments" aria-label="已选文件" hidden></div>
+              <div class="composer-input" id="ds-input" contenteditable="true" spellcheck="false" role="textbox" aria-label="描述新任务" aria-multiline="true" data-placeholder="描述一个复杂目标，灵犀会规划、执行并汇报进度"></div>
+              <div class="composer-bar">
+                <div class="bar-left">
+                  <button class="icon-btn" id="ds-plus" title="添加"><img src="assets/icons/symbol_cross.svg" width="16" height="16" alt=""></button>
+                  <button class="exp-pill" title="专家模式"><img src="assets/icons/knowledge_graph.svg" width="16" height="16" alt=""><span>专家模式：开</span></button>
+                  <button class="icon-btn" title="安全保护"><img src="assets/icons/shield.svg" width="16" height="16" alt=""></button>
+                </div>
+                <div class="bar-right">
+                  <button class="pro-pill" title="模式"><span>Pro 模式</span><img src="assets/icons/arrow_down_s.svg" width="12" height="12" alt=""></button>
+                  <button class="mic-btn" data-send="docspace" id="ds-send" title="发送并新建对话" aria-label="发送并新建对话"><img src="assets/icons/microphone.svg" width="16" height="16" alt=""></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+      <div class="ds-previews" id="ds-previews"></div>
+    </section>
+
+    <!-- 任务空间视图（占位） -->
+    <section class="view view-space" id="view-space" hidden>
+      <div class="chat-top">
+        <div class="chat-title-block">
+          <div class="chat-title">任务空间</div>
+        </div>
+        <div class="chat-top-btns">
+          <button class="light-btn r8" id="btn-back-chat"><img src="assets/icons/archive.svg" width="16" height="16" alt=""><span>返回对话</span></button>
+        </div>
+      </div>
+      <div class="space-placeholder">
+        <div class="sp-title">任务空间</div>
+        <div class="sp-sub">当前原型聚焦「对话模式」，任务空间面板暂未纳入本次还原范围。</div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="ds-popup" class="ds-popup" role="menu" hidden></div>
+
+<!-- 选区悬浮工具栏（KDesign Popover 容器；内容按文档类型渲染） -->
+<div class="sel-toolbar" id="sel-toolbar" hidden><!-- JS 渲染 --></div>
+
+<!-- AI 编辑浮层：选区标签 + 指令输入 + 发送/添加 -->
+<div class="sel-popover" id="sel-popover" hidden>
+  <div class="sp-head" id="sel-pop-pill"></div>
+  <div class="sp-row" id="sel-pop-row">
+    <textarea id="sel-pop-input" spellcheck="false" placeholder="告诉灵犀如何处理这个选区"></textarea>
+  </div>
+  <div class="sp-foot" id="sel-pop-foot">
+    <button class="sp-add" id="sel-pop-add">添加到对话</button>
+    <button class="sp-send sp-send-text" id="sel-pop-send">发送</button>
+  </div>
+</div>
+
+<!-- 选区 pill hover 详情 -->
+<div id="pill-tip" hidden></div>
+
+<!-- [Tooltip: top] 发送按钮操作提示（KDesign Tooltip 规范） -->
+<div class="kd-tooltip-content" id="send-tip" hidden>
+  <div class="tip-row"><span>发送</span><span class="kbd-cap">↵</span></div>
+  <div class="tip-row"><span>添加</span><span class="kbd-cap">Ctrl ↵</span></div>
+  <div class="kd-tooltip-arrow"></div>
+</div>
+
+<!-- [Modal: sm C1] 草稿期切换文件确认 / 无白卡片 / 0 个真组 -->
+<div class="kd-mask" id="switch-mask" hidden>  <div class="kd-modal kd-modal-sm">
+    <div class="kd-modal-content">
+      <div class="kd-modal-header">
+        <div class="kd-modal-title">切换文件</div>
+      </div>
+      <div class="kd-modal-body">对话框有文档选区。如果切换查看新文件，当前选区将被清空。是否确认切换？</div>
+    </div>
+    <div class="kd-modal-footer">
+      <button class="kd-button kd-button-secondary" id="switch-cancel">取消</button>
+      <button class="kd-button kd-button-primary" id="switch-ok">确认切换</button>
+    </div>
+  </div>
+</div>
+
+<!-- [Modal: sm C1] DeepSeek API Key 设置 / 无白卡片 / 0 个真组 -->
+<div class="kd-mask" id="key-mask" hidden>
+  <div class="kd-modal kd-modal-sm">
+    <div class="kd-modal-content">
+      <div class="kd-modal-header"><div class="kd-modal-title">原型设置</div></div>
+      <div class="kd-modal-body">
+        <label class="kd-field-label">选区交互方案</label>
+        <div class="kd-segmented-controller" id="sel-mode-seg">
+          <button class="kd-segmented-item" data-mode="A">方案 A</button>
+          <button class="kd-segmented-item" data-mode="B">方案 B</button>
+          <button class="kd-segmented-item" data-mode="C">方案 C</button>
+        </div>
+        <div class="kd-modal-hint" id="sel-mode-hint"></div>
+        <label class="kd-field-label" style="margin-top:12px;">全屏回复落点</label>
+        <div class="kd-segmented-controller" id="reply-mode-seg">
+          <button class="kd-segmented-item" data-rmode="A">回分屏</button>
+          <button class="kd-segmented-item" data-rmode="B">全屏气泡</button>
+        </div>
+        <div class="kd-modal-hint" id="reply-mode-hint"></div>
+        <div class="ds-setting-row"><label class="kd-field-label" for="preview-composer-switch">文档空间全屏输入框</label><label class="kd-switch"><input type="checkbox" class="kd-switch-original" id="preview-composer-switch" role="switch" aria-label="文档空间全屏输入框" checked><span class="kd-switch-handle"></span></label></div>
+        <div class="kd-modal-hint" id="preview-mode-hint"></div>
+        <label class="kd-field-label" for="key-input" style="margin-top:12px;">API Key</label>
+        <input class="kd-field-input" id="key-input" type="password" placeholder="sk-…" autocomplete="off" spellcheck="false">
+        <div class="kd-modal-hint">Key 仅保存在本浏览器（localStorage），不上传、不进代码仓库。配置后，带选区发送时灵犀会调用 DeepSeek 真实修改右侧文档内容。</div>
+      </div>
+    </div>
+    <div class="kd-modal-footer">
+      <button class="kd-button kd-button-secondary" id="key-cancel">取消</button>
+      <button class="kd-button kd-button-primary" id="key-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/icons-docspace.js"></script>
+<script src="js/docspace.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

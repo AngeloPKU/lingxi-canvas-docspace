@@ -1,0 +1,43 @@
+/* @kd-registry: menu v2.0 */
+/* ══ Menu 下拉菜单 / 右键菜单 ══ */
+
+.kd-menu {
+  position: relative; padding: 8px;
+  background: var(--kd-color-fill-base);
+  border: 1px solid var(--kd-color-line-regular);
+  box-shadow: var(--kd-box-shadow-large);
+  border-radius: var(--kd-border-radius-large);
+  list-style: none;
+}
+.kd-menu-item {
+  position: relative; display: flex;
+  padding: 5px 8px; margin-bottom: 4px;
+  font-size: var(--kd-font-size-sub-base); font-weight: var(--kd-font-weight-regular);
+  line-height: var(--kd-line-height-base); color: var(--kd-color-text-primary);
+  white-space: nowrap; border-radius: var(--kd-border-radius-middle);
+  align-items: flex-start; user-select: none; cursor: pointer;
+}
+.kd-menu-item:last-child { margin-bottom: 0; }
+.kd-menu-item:hover  { background: var(--kd-color-state-hover); }
+.kd-menu-item:active { background: var(--kd-color-state-pressed); }
+.kd-menu-item-disabled { cursor: not-allowed; opacity: 0.3; }
+.kd-menu-item-icon {
+  position: relative; top: 4px; margin-right: 6px;
+  width: 16px; height: 16px; flex-shrink: 0;
+}
+
+/* Selectable mode */
+.kd-menu-selectable .kd-menu-item { padding-left: 24px; }
+.kd-menu-item-tick {
+  position: absolute; top: 50%; left: 4px;
+  transform: translateY(-50%);
+  display: flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px;
+}
+
+.kd-menu-divider { height: 1px; margin: 4px 0; background: var(--kd-color-line-regular); }
+.kd-menu-group-title {
+  padding: 8px 8px 2px;
+  font-size: var(--kd-font-size-sub-base); font-weight: var(--kd-font-weight-bold);
+  line-height: var(--kd-line-height-base); color: var(--kd-color-text-primary);
+}

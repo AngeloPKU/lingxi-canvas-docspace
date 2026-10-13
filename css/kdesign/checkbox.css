@@ -1,0 +1,52 @@
+/* @kd-registry: checkbox v2.0 */
+/* ══ Checkbox 复选框 ══ */
+
+.kd-checkbox { display: inline-flex; align-items: center; cursor: pointer; user-select: none; }
+.kd-checkbox-input { position: relative; display: inline-flex; align-items: center; }
+.kd-checkbox-inner {
+  width: 14px; height: 14px;
+  border: 1px solid var(--kd-color-line-heavy);
+  border-radius: var(--kd-border-radius-extra-small);
+  background: var(--kd-color-fill-base);
+  display: block; position: relative;
+  transition: background .25s cubic-bezier(.71,-.46,.29,1.46),
+              border-color .25s cubic-bezier(.71,-.46,.29,1.46);
+}
+.kd-checkbox-original { position: absolute; opacity: 0; width: 0; height: 0; }
+
+/* Checked (class-based) */
+.kd-checkbox-input.is-checked .kd-checkbox-inner {
+  background: var(--kd-color-public-normal); border-color: transparent;
+}
+.kd-checkbox-input.is-checked .kd-checkbox-inner::after {
+  content: ''; position: absolute;
+  box-sizing: content-box;
+  top: 1px; left: 4px; width: 3px; height: 6px;
+  border: 2px solid var(--kd-color-text-white); border-top: none; border-left: none;
+  transform: rotate(45deg);
+  transition: transform .15s cubic-bezier(.71,-.46,.88,.6) .05s;
+}
+
+/* Indeterminate */
+.kd-checkbox-input.is-indeterminate .kd-checkbox-inner {
+  background: var(--kd-color-public-normal); border-color: transparent;
+}
+.kd-checkbox-input.is-indeterminate .kd-checkbox-inner::before {
+  content: ''; position: absolute;
+  top: 50%; left: 3px; right: 3px; margin-top: -1px;
+  border-top: 2px solid var(--kd-color-text-white);
+}
+
+/* Hover */
+.kd-checkbox-input:hover:not(.is-disabled) .kd-checkbox-inner { border-color: var(--kd-color-public-normal); }
+.kd-checkbox-input.is-checked:hover:not(.is-disabled) .kd-checkbox-inner { background: var(--kd-color-public-hover); }
+
+/* Disabled */
+.kd-checkbox-input.is-disabled { pointer-events: none; }
+.kd-checkbox-input.is-disabled .kd-checkbox-inner {
+  background: var(--kd-color-fill-light); border-color: var(--kd-color-fill-heavy);
+}
+.kd-checkbox-input.is-disabled ~ .kd-checkbox-label { color: var(--kd-color-text-secondary); }
+.kd-checkbox.is-disabled { cursor: not-allowed; }
+
+.kd-checkbox-label { padding-left: 4px; font-size: var(--kd-font-size-sub-base); line-height: 20px; }

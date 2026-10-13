@@ -1,0 +1,11 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="24x24/wpp-24">
+<path id="Rectangle 3017" d="M0 3C0 1.34315 1.34315 0 3 0H21C22.6569 0 24 1.34315 24 3V21C24 22.6569 22.6569 24 21 24H3C1.34315 24 0 22.6569 0 21V3Z" fill="#F5670F"/>
+<path id="Rectangle 2508" d="M0 20H24V21C24 22.6569 22.6569 24 21 24H3C1.34315 24 0 22.6569 0 21V20Z" fill="#DF4D00"/>
+<path id="Rectangle 2509" d="M20 0H21C22.6569 0 24 1.34315 24 3V21C24 22.6569 22.6569 24 21 24H20V0Z" fill="#FF8940"/>
+<path id="Intersect" d="M20 24H21C22.6569 24 24 22.6569 24 21V20H20V24Z" fill="#F5670F"/>
+<g id="&#229;&#155;&#190;&#229;&#189;&#162;/24/wpp">
+<path id="path" fill-rule="evenodd" clip-rule="evenodd" d="M4.99609 3.99805H10.9961C13.2052 3.99805 14.9961 5.78891 14.9961 7.99805C14.9961 10.2072 13.2052 11.998 10.9961 11.998H6.99609V15.998H4.99609V3.99805ZM6.99609 9.99805H10.9961C12.1007 9.99805 12.9961 9.10262 12.9961 7.99805C12.9961 6.89348 12.1007 5.99805 10.9961 5.99805H6.99609V9.99805Z" fill="white"/>
+</g>
+</g>
+</svg>

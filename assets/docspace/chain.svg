@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" requiredCustomFeatures="data-kd-color-scheme" km_stroke-width="1" km_darkmode="true"><desc>链接16_超链接_Pdf_HyperLink_InsertHyperlink_link</desc><style>
+    .kd-stroke-width-icon-regular { 
+       stroke-width: var(--kd-stroke-width-icon-regular, 1px)
+    }
+    .kd-color-icon-primary {
+       fill: var(--kd-color-icon-primary, #333333);
+       stroke: var(--kd-color-icon-primary, #333333);
+       km_fill: #333333;
+       km_stroke: #333333;
+       km_darkmode_fill: #C7C7C7;
+       km_darkmode_stroke: #C7C7C7; 
+    }</style><g id="group-0" class="kd-color-icon-primary kd-stroke-width-icon-regular"><path id="Vector" d="M8.66985 3.31093L9.33972 2.64107C10.6346 1.34621 12.734 1.34621 14.0288 2.64107C15.3237 3.93593 15.3237 6.03532 14.0288 7.33018L11.3493 10.0097C10.0545 11.3045 7.95509 11.3045 6.66023 10.0097C6.0128 9.36224 5.68908 8.51367 5.68909 7.66511M10.3109 8.33498C10.3109 7.48642 9.98717 6.63786 9.33975 5.99043C8.04488 4.69557 5.9455 4.69557 4.65064 5.99043L1.97115 8.66992C0.676286 9.96478 0.676283 12.0642 1.97115 13.359C3.26601 14.6539 5.36539 14.6539 6.66025 13.359L7.33012 12.6892" stroke-linecap="round" fill="none" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></g></svg>

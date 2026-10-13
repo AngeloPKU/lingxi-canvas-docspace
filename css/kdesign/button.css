@@ -1,0 +1,53 @@
+/* @kd-registry: button v2.0 */
+/* ══ Button 按钮 ══ */
+
+.kd-button {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: inherit; font-weight: var(--kd-font-weight-regular);
+  line-height: var(--kd-line-height-base);
+  border: 1px solid transparent; border-radius: var(--kd-border-radius-middle);
+  cursor: pointer; white-space: nowrap; user-select: none; outline: none;
+  transition: background var(--kd-time-fast) var(--kd-easing-ease),
+              border-color var(--kd-time-fast) var(--kd-easing-ease),
+              color var(--kd-time-fast) var(--kd-easing-ease);
+}
+.kd-button-children { display: inline-flex; align-items: center; }
+.kd-button-prefix-icon { margin-right: 4px; font-size: 16px; display: inline-flex; }
+.kd-button-suffix-icon { margin-left: 4px; font-size: 16px; display: inline-flex; }
+
+/* Size */
+.kd-button-sm { height: 24px; padding: 0 5px;    font-size: var(--kd-font-size-sub-base); border-radius: var(--kd-border-radius-small); }
+.kd-button-m  { height: 28px; padding: 2px 11px; font-size: var(--kd-font-size-sub-base); }
+.kd-button-lg { height: 32px; padding: 4px 15px; font-size: var(--kd-font-size-sub-base); }
+.kd-button-xl { height: 36px; padding: 6px 19px; font-size: var(--kd-font-size-middle); }
+.kd-button-light.kd-button-m { padding: 2px 8px; }
+
+/* Primary */
+.kd-button-primary { background: var(--kd-color-public-normal); color: var(--kd-color-text-white); }
+.kd-button-primary:hover:not(:disabled) { background: var(--kd-color-public-hover); }
+.kd-button-primary:active:not(:disabled) { background: var(--kd-color-public-pressed); }
+
+/* Secondary */
+.kd-button-secondary { background: var(--kd-color-fill-base); color: var(--kd-color-text-primary); border-color: var(--kd-color-fill-heavy); }
+.kd-button-secondary:hover:not(:disabled)  { background: var(--kd-color-fill-light); }
+.kd-button-secondary:active:not(:disabled) { background: var(--kd-color-fill-regular); }
+
+/* Light */
+.kd-button-light { background: transparent; color: var(--kd-color-text-primary); }
+.kd-button-light:hover:not(:disabled)  { background: var(--kd-color-state-hover); }
+.kd-button-light:active:not(:disabled) { background: var(--kd-color-state-pressed); }
+
+/* Danger */
+.kd-button-light.kd-button-danger  { color: var(--kd-color-error-normal); }
+.kd-button-primary.kd-button-danger { background: var(--kd-color-error-normal); }
+.kd-button-primary.kd-button-danger:hover:not(:disabled)  { background: var(--kd-color-error-hover); }
+.kd-button-primary.kd-button-danger:active:not(:disabled) { background: var(--kd-color-error-pressed); }
+
+/* Disabled */
+.kd-button:disabled { opacity: var(--kd-opacity-disabled); cursor: not-allowed; pointer-events: none; }
+
+/* Icon-only */
+.kd-button-icon.kd-button-sm { min-width: 24px; padding: 3px; }
+.kd-button-icon.kd-button-m  { min-width: 28px; padding: 5px; }
+.kd-button-icon.kd-button-lg { min-width: 32px; padding: 7px; }
+.kd-button-icon.kd-button-xl { min-width: 36px; padding: 9px; }

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" requiredCustomFeatures="data-kd-color-scheme" km_stroke-width="1" km_darkmode="true"><desc>下三角</desc><style>
+    .kd-stroke-width-icon-regular { 
+       stroke-width: var(--kd-stroke-width-icon-regular, 1px)
+    }
+    .kd-color-icon-secondary {
+       fill: var(--kd-color-icon-secondary, #757575);
+       stroke: var(--kd-color-icon-secondary, #757575);
+       km_fill: #757575;
+       km_stroke: #757575;
+       km_darkmode_fill: #C7C7C7;
+       km_darkmode_stroke: #C7C7C7; 
+    }</style><g id="group-0" class="kd-color-icon-secondary kd-stroke-width-icon-regular"><path id="area1" d="M4.60262 6.02388C4.32371 5.57757 4.64617 5 5.17425 5H10.8261C11.346 5 11.6694 5.5623 11.4068 6.00896C10.4089 7.70642 9.67075 8.96194 8.66766 10.6682C8.41176 11.1035 7.78244 11.1123 7.51481 10.684L4.60262 6.02388Z" stroke="none"/></g></svg>

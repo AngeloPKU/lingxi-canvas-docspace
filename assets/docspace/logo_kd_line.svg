@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" requiredCustomFeatures="data-kd-color-scheme" km_stroke-width="1" km_darkmode="true"><desc>金山文档线型logo_线_线性</desc><style>
+    .kd-stroke-width-icon-regular { 
+       stroke-width: var(--kd-stroke-width-icon-regular, 1px)
+    }
+    .kd-color-icon-primary {
+       fill: var(--kd-color-icon-primary, #333333);
+       stroke: var(--kd-color-icon-primary, #333333);
+       km_fill: #333333;
+       km_stroke: #333333;
+       km_darkmode_fill: #C7C7C7;
+       km_darkmode_stroke: #C7C7C7; 
+    }</style><g id="group-0" class="kd-color-icon-primary kd-stroke-width-icon-regular"><path id="Polygon 6" d="M7.99971 6.99973L14.3005 4.09973M7.99971 6.99973V10.9997M7.99971 6.99973L5.69687 5.93516M7.99971 10.9997V14.9997M7.99971 10.9997L5.69687 9.93516M5.69687 9.93516L1.54731 12.0001C1.53991 12.0038 1.53993 12.0144 1.54735 12.018L7.77878 15.0908C7.91808 15.1595 8.08138 15.1595 8.22073 15.0909L14.2214 12.1372C14.3924 12.053 14.5006 11.8791 14.5006 11.6886V4.3109C14.5006 4.12039 14.3924 3.94644 14.2214 3.86231L8.22074 0.908341C8.08139 0.839744 7.91807 0.8398 7.77877 0.908496L1.52901 3.99047C1.52147 3.99419 1.52161 4.00499 1.52924 4.00852L5.69687 5.93516M5.69687 9.93516L1.52924 8.00852C1.52161 8.00499 1.52147 7.99419 1.52901 7.99047L5.69687 5.93516" fill="none" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></g></svg>
