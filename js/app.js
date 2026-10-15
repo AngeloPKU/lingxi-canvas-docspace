@@ -18,8 +18,8 @@
   let homeFiles = [];
   let homeSegments = [];
   const previewInstance = new URLSearchParams(location.search).get('instance') || previewId;
-  const MINI_VISIBILITY_KEYS = { docspace: 'lingxi_mini_visible_docspace_demo-user', chat: 'lingxi_mini_visible_chat_demo-user' };
-  const miniContext = () => previewId ? 'docspace' : 'chat';
+  const CHAT_MINI_VISIBILITY_KEY = 'lingxi_mini_visible_chat_demo-user';
+  let previewMiniVisible = true;
   const isMini = () => !!previewId || $('.main').classList.contains('canvas-full');
   let lastSentClock = Date.now();
   let nextExecutionEnvironment = null;
@@ -35,16 +35,16 @@
   function applyMiniVisibility() {
     if (!isMini()) return;
     const available = !previewId || previewComposerOn;
-    const visible = available && localStorage.getItem(MINI_VISIBILITY_KEYS[miniContext()]) !== 'hidden';
+    const visible = available && (previewId ? previewMiniVisible : localStorage.getItem(CHAT_MINI_VISIBILITY_KEY) !== 'hidden');
     $('#canvas-float-composer').hidden = !available;
     $('#canvas-float-composer').classList.toggle('fc-hidden', !visible);
     $('#canvas-float-reply').classList.toggle('fc-hidden', !visible);
     $('#canvas-float-showzone').hidden = !available || visible;
   }
-  function setMiniVisible(visible, broadcast = true) {
-    localStorage.setItem(MINI_VISIBILITY_KEYS[miniContext()], visible ? 'visible' : 'hidden');
+  function setMiniVisible(visible) {
+    if (previewId) previewMiniVisible = visible;
+    else localStorage.setItem(CHAT_MINI_VISIBILITY_KEY, visible ? 'visible' : 'hidden');
     applyMiniVisibility();
-    if (previewId && broadcast) previewPost('composer-visibility', { visible });
   }
   function revealMiniForSelection() { if (isMini() && (!previewId || previewComposerOn)) setMiniVisible(true); }
   function renderChatFiles() {
@@ -103,10 +103,10 @@
     const messages = s.messages.map((m) => m.segments ? { ...m, segments: plainSegments(m.segments) } : m);
     if (running && previewLiveShell) {
       const sh = previewLiveShell;
-      messages.push({ role: 'ai', id: previewMessageId + '-reply', reply: {
+      messages.push({ role: 'ai', id: (previewId ? previewMessageId : s.requestId) + '-reply', reply: {
         stepsHead: sh.headText.textContent,
         steps: [...sh.detail.children].map((n) => ({ title: n.querySelector('.step-title').textContent, detail: n.querySelector('.step-status').textContent, state: n.classList.contains('done') ? 'done' : n.classList.contains('running') ? 'running' : 'pending' })),
-        answer: sh.answer.textContent, streaming: true,
+        answer: sh.answer.textContent, streaming: true, source: sh.source,
       } });
     }
     const snapshot = { id: s.id, title: s.title, messages, contextFiles: s.contextFiles, previewSource: previewId || s.previewSource, previewInstance: previewId ? previewInstance : s.previewInstance, streaming: running, revision: ++previewRevision, lastSentAt: s.lastSentAt, requestId: s.requestId, requestOwner: s.requestOwner };
@@ -217,7 +217,6 @@
     if (previewId) {
       if (event.source !== window.parent) return;
       if (data.type === 'preview-mode') { previewComposerOn = data.enabled; applyPreviewMode(); }
-      if (data.type === 'composer-visibility') { setMiniVisible(data.visible, false); }
       if (data.type === 'session-sync') { receiveLinkedSession(data.session); }
       if (data.type === 'preview-doc' && !running && displayedDoc?.id === data.doc.id) {
         const doc = displayedDoc; displayedDoc = null;
@@ -227,7 +226,6 @@
     }
     const sourceId = Docspace.previewSource(event.source);
     if (!sourceId) return;
-    if (data.type === 'composer-visibility') { localStorage.setItem(MINI_VISIBILITY_KEYS.docspace, data.visible ? 'visible' : 'hidden'); Docspace.broadcastVisibility(data.visible); return; }
     if (data.type === 'preview-ready') { event.source.postMessage({ channel: 'lingxi-docspace', type: 'preview-mode', enabled: previewComposerOn }, '*'); return; }
     if (data.type === 'preview-sync' && data.session?.previewSource === sourceId) {
       const incoming = data.session;
@@ -1578,30 +1576,8 @@
   };
 
   async function callBailian(system, user) {
-    const key = getApiKey();
-    if (!key) return { error: 'nokey' };
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 30000);
-    try {
-      const res = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
-        body: JSON.stringify({ model: 'qwen-flash', enable_thinking: false, max_tokens: 4096, temperature: 0.3, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }),
-        signal: ctrl.signal,
-      });
-      if (!res.ok) {
-        const detail = await res.json().catch(() => ({}));
-        const code = String(detail.error?.code || '').replace(/[^a-zA-Z0-9_.-]/g, '').slice(0, 80);
-        console.warn('百炼请求失败', res.status, code);
-        return { error: 'HTTP ' + res.status + (code ? ' / ' + code : '') };
-      }
-      const j = await res.json();
-      const t = ((j.choices || [])[0] || {}).message ? j.choices[0].message.content : '';
-      return String(t || '').trim() ? { text: String(t).trim() } : { error: 'empty' };
-    } catch (err) {
-      console.warn('百炼网络请求失败', err?.name, err?.message);
-      return { error: err?.name === 'AbortError' ? '请求超时，请重试' : '网络连接失败，请检查网络后重试' };
-    } finally { clearTimeout(timer); }
+    return ModelChat.request({ key: getApiKey(), maxTokens: 4096, timeout: 30000,
+      messages: [{ role: 'system', content: system }, { role: 'user', content: user }] });
   }
 
   const SYS_TEXT = '你是文档编辑助手。用户给你一段原文和修改要求。只输出修改后的文本本身：不要解释、不要加引号或代码块、不要 markdown 标记，保持原文语言与大致篇幅。';
@@ -1835,7 +1811,8 @@
   function sendComposer() {
     if (running || currentSession()?.streaming) return;
     const submittedFromMini = isMini();
-    const segs = composerSegments(), files = currentSession()?.draftFiles || [];
+    const segs = composerSegments();
+    const files = currentSession()?.draftFiles || [];
     const hasSel = segs.some((part) => part.t === 'sel');
     const textOnly = segs.filter((part) => part.t === 'text').map((part) => part.v).join('').trim();
     if (!hasSel && !textOnly && !files.length) return;
@@ -1847,87 +1824,126 @@
     else runSelFlow(segs, files);
   }
 
-  /* ---------- 核心循环：发送 → mock 流式回复 ---------- */
+  /* ---------- 核心循环：演示动作与真实问答 ---------- */
   function startWithText(text) {
     newChat();
     sendMessage(text);
   }
 
-  async function sendMessage(text, files = []) {
-    text = (text || '').trim();
-    if (!text || running || currentSession()?.streaming) return;
-    if (previewId) { preparePreviewRequest(text); files = mergeFiles([displayedDoc], files); }
-    running = true;
-    setSending(true);
-
-    // 无会话则新建
-    if (!currentId) {
-      const s = { id: uid(), title: text.length > 20 ? text.slice(0, 20) + '…' : text, messages: [] };
-      sessions.unshift(s);
-      currentId = s.id;
-      $('#feed').innerHTML = '';
-      renderMenu();
-      syncCanvas();
-    }
-    showView('chat');
-
-    const session = currentSession();
-    touchSession(session);
-    session.messages.push({ role: 'user', id: previewMessageId || uid(), text, files });
-    session.contextFiles = mergeFiles(session.contextFiles || [], files);
-    renderUser(text, files, session.messages[session.messages.length - 1].id);
-    $('#home-input').value = '';
-    autosize($('#home-input'));
-    $('#status-text').textContent = '灵犀正在处理…';
-
-    const reply = buildReply(text);
-    const floatMode = floatModeActive();
-    const sh = renderAiShell();
-    if (floatMode) attachFloatShell(sh);
-    publishPreview();
-
-    // 打字指示
+  async function playDemoReply(sh, reply, text) {
+    sh.answer.textContent = '';
     const typing = el('div', 'typing', '<span></span><span></span><span></span>');
     sh.block.appendChild(typing);
     scrollBottom();
     await wait(500);
     typing.remove();
-
-    // 步骤流
     const nodes = renderSteps(sh.detail, reply.steps);
-    for (let i = 0; i < nodes.length; i++) {
-      nodes[i].className = 'step-item running';
-      nodes[i].querySelector('.st-ic').textContent = '◌';
-      sh.headText.textContent = '正在执行：' + reply.steps[i].title;
+    for (let index = 0; index < nodes.length; index++) {
+      nodes[index].className = 'step-item running';
+      nodes[index].querySelector('.st-ic').textContent = '◌';
+      sh.headText.textContent = '正在执行：' + reply.steps[index].title;
       await wait(420 + Math.random() * 380);
-      nodes[i].className = 'step-item done';
-      nodes[i].querySelector('.st-ic').textContent = '✓';
+      nodes[index].className = 'step-item done';
+      nodes[index].querySelector('.st-ic').textContent = '✓';
     }
     sh.headText.textContent = reply.stepsHead;
-
-    // 正文流式
     $('#status-text').textContent = '灵犀正在回复中…';
     await typeText(sh.answer, reply.answer, /仔细思考/.test(text));
-    $('#status-text').textContent = '灵犀已就绪';
+    return reply;
+  }
 
-    // 文档卡片：生成完成后出现，并自动在右侧分屏打开（位置：正文之后、推荐追问之前）
-    if (reply.doc) {
-      sh.block.insertBefore(docCard(reply.doc), sh.reco);
-      scrollBottom();
-      await wait(400);
-      if (!previewId) openCanvasTab(reply.doc);
+  async function answerWithModel(sh, session, activeDocument) {
+    sh.source = 'model';
+    try {
+      const prepared = ModelChat.context(session, activeDocument, (doc) => {
+        if (activeDocument?.id === doc.id) return activeDocument;
+        return session.canvas?.tabs.find((tab) => tab.id === doc.id) || Docspace.cachedDoc(doc.id) || doc;
+      });
+      if (prepared.truncated) toast('附件内容较长，本次问答仅携带部分内容');
+      const steps = [
+        { title: prepared.files.length ? '读取附件' : '整理对话', detail: prepared.files.length ? '读取 ' + prepared.files.length + ' 个文件的文本内容' : '结合最近的对话上下文', state: 'done' },
+        { title: '生成回答', detail: '根据问题与提供的资料回答', state: 'running' },
+      ];
+      const nodes = renderSteps(sh.detail, steps);
+      const updateStep = (index, state) => {
+        steps[index].state = state;
+        nodes[index].className = 'step-item ' + state;
+        nodes[index].querySelector('.st-ic').textContent = state === 'done' ? '✓' : '◌';
+      };
+      updateStep(0, 'done'); updateStep(1, 'running');
+      sh.headText.textContent = '正在生成回答…';
+      $('#status-text').textContent = '灵犀正在回复中…';
+      const result = await ModelChat.request({ key: getApiKey(), messages: prepared.messages, maxTokens: 1500,
+        onDelta: (answer) => { sh.answer.textContent = answer; scrollBottom(); } });
+      if (result.error) throw new Error(result.error);
+      if (result.finishReason === 'length') toast('回复已达到演示长度上限，可以继续追问');
+      updateStep(1, 'done');
+      sh.answer.textContent = result.text;
+      sh.headText.textContent = '回答已完成';
+      return { source: 'model', stepsHead: '回答已完成', steps, answer: result.text, reco: [] };
+    } catch (error) {
+      sh.source = 'fallback';
+      toast('真实模型暂不可用，本次使用演示回复');
+      return null;
     }
+  }
 
-    if (reply.urlDoc) sh.block.insertBefore(urlCard(reply.urlDoc), sh.reco);
-    renderActions(sh.block, reply.answer);
-    if (!floatMode) renderReco(sh.reco, reply.reco);
+  async function sendMessage(text, files = []) {
+    text = (text || '').trim();
+    if (!text || running || currentSession()?.streaming) return;
+    const activeDocument = currentSession() && !$('#view-chat').hidden && !$('#canvas-panel').hidden ? displayedDoc : null;
+    saveCanvasEdits();
+    if (previewId) { preparePreviewRequest(text); files = mergeFiles([displayedDoc], files); }
+    running = true;
+    setSending(true);
 
-    session.messages.push({ role: 'ai', reply });
-    session.streaming = false;
-    running = false;
-    setSending(false);
+    if (!currentId) {
+      const session = { id: uid(), title: text.length > 20 ? text.slice(0, 20) + '…' : text, messages: [] };
+      sessions.unshift(session);
+      currentId = session.id;
+      $('#feed').innerHTML = '';
+      renderMenu();
+      syncCanvas();
+    }
+    showView('chat');
+    const session = currentSession();
+    touchSession(session);
+    session.messages.push({ role: 'user', id: previewMessageId || uid(), text, files });
+    session.contextFiles = mergeFiles(session.contextFiles || [], activeDocument ? [activeDocument] : [], files);
+    renderUser(text, files, session.messages[session.messages.length - 1].id);
+    $('#home-input').value = '';
+    autosize($('#home-input'));
+    $('#status-text').textContent = '灵犀正在处理…';
+    const route = classifyDemoRequest(text);
+    const floatMode = floatModeActive();
+    const sh = renderAiShell();
+    if (floatMode) attachFloatShell(sh);
     publishPreview();
-    scrollBottom();
+    try {
+      let reply = !route && getApiKey() ? await answerWithModel(sh, session, activeDocument) : null;
+      if (!reply) {
+        reply = buildReply(text);
+        reply.source = route ? 'demo' : 'fallback';
+        sh.source = reply.source;
+        await playDemoReply(sh, reply, text);
+      }
+      $('#status-text').textContent = '灵犀已就绪';
+      if (reply.doc) {
+        sh.block.insertBefore(docCard(reply.doc), sh.reco);
+        scrollBottom();
+      }
+      if (reply.urlDoc) sh.block.insertBefore(urlCard(reply.urlDoc), sh.reco);
+      renderActions(sh.block, reply.answer);
+      if (!floatMode) renderReco(sh.reco, reply.reco);
+      session.messages.push({ role: 'ai', reply });
+      session.contextFiles = mergeFiles(session.contextFiles || [], [reply.doc, reply.urlDoc].filter(Boolean));
+    } finally {
+      session.streaming = false;
+      running = false;
+      setSending(false);
+      publishPreview();
+      scrollBottom();
+    }
   }
 
   async function typeText(node, text, slow) {
@@ -2027,7 +2043,7 @@
   /* ---------- 初始化 ---------- */
   function init() {
     window.addEventListener('message', handlePreviewMessage);
-    window.addEventListener('storage', (event) => { if (Object.values(MINI_VISIBILITY_KEYS).includes(event.key)) applyMiniVisibility(); });
+    window.addEventListener('storage', (event) => { if (!previewId && event.key === CHAT_MINI_VISIBILITY_KEY) applyMiniVisibility(); });
     if (!previewId) {
       const history = MENU.find((group) => group.dynamic);
       (history.items || []).forEach((item, index) => { const seed = SEEDS[item.seed]; sessions.push({ id: 'seed' + item.seed, title: seed.title,

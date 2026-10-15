@@ -4,16 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>灵犀 · 文档空间</title>
-<link rel="stylesheet" href="css/kdesign/tokens.css?v=20261015-docspace-725277b805">
-<link rel="stylesheet" href="css/kdesign/reset.css?v=20261015-docspace-725277b805">
-<link rel="stylesheet" href="css/style.css?v=20261015-docspace-725277b805">
-<link rel="stylesheet" href="css/kdesign/button.css?v=20261015-docspace-725277b805">
-<link rel="stylesheet" href="css/kdesign/menu.css?v=20261015-docspace-725277b805">
-  <link rel="stylesheet" href="css/kdesign/checkbox.css?v=20261015-docspace-725277b805">
-  <link rel="stylesheet" href="css/kdesign/switch.css?v=20261015-docspace-725277b805">
-<link rel="stylesheet" href="css/docspace.css?v=20261015-docspace-725277b805">
-<link rel="stylesheet" href="css/composer-tools.css?v=20261015-docspace-725277b805">
-<link rel="stylesheet" href="css/workbench.css?v=20261015-docspace-725277b805">
+<link rel="stylesheet" href="css/kdesign/tokens.css?v=20261015-docspace-b0c8b53081">
+<link rel="stylesheet" href="css/kdesign/reset.css?v=20261015-docspace-b0c8b53081">
+<link rel="stylesheet" href="css/style.css?v=20261015-docspace-b0c8b53081">
+<link rel="stylesheet" href="css/kdesign/button.css?v=20261015-docspace-b0c8b53081">
+<link rel="stylesheet" href="css/kdesign/menu.css?v=20261015-docspace-b0c8b53081">
+  <link rel="stylesheet" href="css/kdesign/checkbox.css?v=20261015-docspace-b0c8b53081">
+  <link rel="stylesheet" href="css/kdesign/switch.css?v=20261015-docspace-b0c8b53081">
+<link rel="stylesheet" href="css/docspace.css?v=20261015-docspace-b0c8b53081">
+<link rel="stylesheet" href="css/composer-tools.css?v=20261015-docspace-b0c8b53081">
+<link rel="stylesheet" href="css/workbench.css?v=20261015-docspace-b0c8b53081">
 </head>
 <body>
 <div class="window">
@@ -340,7 +340,7 @@
         <div class="kd-modal-hint" id="preview-mode-hint"></div>
         <label class="kd-field-label" for="key-input" style="margin-top:12px;">阿里云百炼 API Key</label>
         <input class="kd-field-input" id="key-input" type="password" placeholder="sk-…" autocomplete="off" spellcheck="false">
-        <div class="kd-modal-hint">模型：Qwen Flash（非思考模式）。Key 仅保存在当前浏览器，调用时发送至阿里云百炼，不写入公开代码。配置后，带选区发送可真实修改右侧文档内容。</div>
+        <div class="kd-modal-hint">模型：Qwen Flash（非思考模式）。配置后，所有输入框的普通问答都会调用模型，并携带附件文本和最近 6 轮对话；图片仅传“[图片]”。选区帮改支持真实写回；生成文件、生成网页和“仔细思考”保留演示剧情。Key 仅保存在当前浏览器，不写入公开代码。</div>
       </div>
     </div>
     <div class="kd-modal-footer">
@@ -350,10 +350,11 @@
   </div>
 </div>
 
-<script src="js/data.js?v=20261015-docspace-725277b805"></script>
-<script src="js/icons-docspace.js?v=20261015-docspace-725277b805"></script>
-<script src="js/composer-tools.js?v=20261015-docspace-725277b805"></script>
-<script src="js/docspace.js?v=20261015-docspace-725277b805"></script>
-<script src="js/app.js?v=20261015-docspace-725277b805"></script>
+<script src="js/data.js?v=20261015-docspace-b0c8b53081"></script>
+<script src="js/icons-docspace.js?v=20261015-docspace-b0c8b53081"></script>
+<script src="js/composer-tools.js?v=20261015-docspace-b0c8b53081"></script>
+<script src="js/docspace.js?v=20261015-docspace-b0c8b53081"></script>
+<script src="js/model-chat.js?v=20261015-docspace-b0c8b53081"></script>
+<script src="js/app.js?v=20261015-docspace-b0c8b53081"></script>
 </body>
 </html>

@@ -95,13 +95,14 @@ const SEEDS = [
 
 /* ============ 通用回复模板（任意输入） ============ */
 function buildReply(userText) {
-  if (/网页|网站|网址|看板|url/i.test(userText)) {
+  const route = classifyDemoRequest(userText);
+  if (route?.kind === 'web') {
     const urlDoc = MockFiles.webDocument();
     return { stepsHead: '创建了 1 个网页', steps: [{ title: '整理内容', detail: '组织工作台信息' }, { title: '生成网页', detail: '完成页面布局' }],
       answer: '已生成项目工作台，点击下方链接查看。', urlDoc, reco: ['调整工作台的展示内容'] };
   }
   // 「仔细思考」：超长流式回复，方便检验全屏/分屏切换续流
-  if (/仔细思考/.test(userText)) {
+  if (route?.kind === 'thinking') {
     return {
       stepsHead: '运行了 6 个命令，查看了 12 个文件，编辑了 5 个文件，搜索了 8 次',
       steps: [
@@ -146,8 +147,7 @@ function buildReply(userText) {
   }
 
   // 文档类需求：命中关键词则走固定文档生成剧情
-  const docType = detectDocType(userText);
-  if (docType) return buildDocReply(docType, userText);
+  if (route?.kind === 'document') return buildDocReply(route.type, userText);
 
   const short = userText.trim().slice(0, 14);
   return {
@@ -172,7 +172,37 @@ function buildReply(userText) {
 
 /* ============ 文档生成剧情（docx / pptx / xlsx） ============ */
 
-// 关键词 → 文档类型。xlsx 类先判，避免「表格版PPT」误判
+// 明确的产物要求走演示；阅读、比较、解释和摘要走问答。
+function classifyDemoRequest(text) {
+  const value = String(text || '').trim();
+  const instruction = value.replace(/^(?:(?:请你|请|帮我|麻烦|你能|能不能|可以|能否|给我|再)\s*)+/, '');
+  const guidance = /^(?:解释|分析|比较|对比|总结|概括|解读|介绍|讲解|告诉我|说明|为什么|为何|如何|怎么|怎样|我想知道|我想了解|请问)/.test(instruction)
+    || /(?:方法|步骤|教程|原理|含义|是什么意思|是什么原因|能做什么|有什么区别)[？?]?$/.test(value)
+    || /(?:不要|不用|无需|别)(?:再|给我|帮我)?(?:生成|制作|创建|新建|输出|导出)/.test(value);
+  const actions = [...value.matchAll(/生成|制作|创建|新建|起草|撰写|编写|输出|导出(?:为|成)?|做成|写成|转成|转为|转换成|转换为|整理成|写(?=一|个|份|篇|张|报告|文档|周报|文章|方案|纪要|总结)|做(?=一|个|份|张|表格|PPT|ppt|文档)/g)];
+  let target = null;
+  if (actions.length && !guidance) {
+    const action = actions[actions.length - 1];
+    const tail = value.slice(action.index + action[0].length).split(/[，,。；;\n]/)[0];
+    const types = [...tail.matchAll(/xlsx|excel|表格|工作表|统计表|清单表|pptx|ppt|演示文稿|幻灯片|汇报胶片|docx|word|文档|报告|文章|方案|总结|周报|纪要|网页|网站|网址|看板|url/gi)];
+    const type = types[types.length - 1];
+    if (type) {
+      const suffix = tail.slice(type.index + type[0].length).trim();
+      const isTextAnswer = /^(?:中|里|里面)?(?:的)?(?:摘要|要点|内容|含义|结论|区别|建议|原因|问题|说明|文字|文案|大纲|标题|思路|步骤|方法|教程|代码)/.test(suffix)
+        || /^(?:一段|一句|几句|几点|一条)/.test(tail.trim())
+        || (type[0] === '总结' && /(?:文档|报告|表格|工作表|PPT|ppt|文章|方案|周报|纪要)(?:的)?总结/.test(tail));
+      if (!isTextAnswer) {
+        target = /网页|网站|网址|看板|url/i.test(type[0]) ? { kind: 'web' }
+          : { kind: 'document', type: detectDocType(type[0]) };
+      }
+    }
+  }
+  if (target?.kind === 'web') return target;
+  if (/仔细思考/.test(value)) return { kind: 'thinking' };
+  return target;
+}
+
+// 已识别产物目标 → 文件类型。
 function detectDocType(text) {
   const t = String(text || '');
   if (/xlsx|excel|表格|工作表|统计表|清单表/i.test(t)) return 'xlsx';

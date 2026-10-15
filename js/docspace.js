@@ -121,7 +121,7 @@
       frame.title = item.name + ' · Canvas 预览';
       frame.onload = () => panel.querySelector('.ds-preview-loading')?.remove();
       if (item.type === 'app') frame.srcdoc = appPreviewHtml();
-      else frame.src = 'index.html?preview=' + encodeURIComponent(item.id) + '&instance=' + panel.dataset.instance;
+      else frame.src = 'index.html?v=20261015-docspace-b0c8b53081&preview=' + encodeURIComponent(item.id) + '&instance=' + panel.dataset.instance;
       panel.appendChild(frame); $('#ds-previews').appendChild(panel);
     }
     state.recent = [item.id, ...state.recent.filter((id) => id !== item.id)].slice(0, 8);
@@ -363,8 +363,8 @@
   window.Docspace = {
     init, makePreviewDoc, hidePopup, addFiles,
     cacheDoc: (doc) => documentCache.set(doc.id, JSON.parse(JSON.stringify(doc))),
+    cachedDoc: (id) => documentCache.get(id) || null,
     previewInstance: (source) => [...document.querySelectorAll('.ds-preview iframe')].find((f) => f.contentWindow === source)?.parentElement.dataset.instance,
-    broadcastVisibility: (visible) => document.querySelectorAll('.ds-preview iframe').forEach((f) => f.contentWindow.postMessage({ channel: 'lingxi-docspace', type: 'composer-visibility', visible }, '*')),
     updatePreviewSession: (session) => { const doc = session.contextFiles?.find((d) => d.id === session.previewSource); if (doc) documentCache.set(doc.id, JSON.parse(JSON.stringify(doc))); const panel = [...document.querySelectorAll('.ds-preview')].find((p) => p.dataset.instance === session.previewInstance && p.dataset.retired !== 'true'); panel?.querySelector('iframe')?.contentWindow.postMessage({ channel: 'lingxi-docspace', type: 'session-sync', session: JSON.parse(JSON.stringify(session)) }, '*'); },
     open: () => { callbacks.onOpen(); hidePopup(); },
     openPreview: (id) => { const item = find(id); if (item) { callbacks.onOpen(); openFile(item); } },

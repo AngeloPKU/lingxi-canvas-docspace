@@ -5,7 +5,7 @@
 .canvas-tabs { flex: 1; position: relative; overflow-x: auto; scrollbar-width: thin; }
 .canvas-tabs::-webkit-scrollbar { height: 4px; }
 .canvas-tabs::-webkit-scrollbar-thumb { background: var(--kd-color-line-regular); border-radius: var(--kd-border-radius-middle); }
-.canvas-workbench-tab { position: sticky; left: 0; z-index: 1; justify-content: flex-start; gap: 4px; }
+.canvas-workbench-tab { justify-content: flex-start; gap: 4px; }
 .canvas-workbench-tab .canvas-tab-name { flex: 1; width: auto; text-align: left; }
 .canvas-tab:focus-visible, #btn-canvas-restore:focus-visible, .workbench-step-summary:focus-visible { outline: 1px solid var(--kd-color-line-public); outline-offset: -1px; }
 .workbench-active .canvas-row1 { padding-bottom: 12px; border-bottom: 1px solid var(--kd-color-line-light); }
