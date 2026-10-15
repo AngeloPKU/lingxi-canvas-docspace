@@ -1377,8 +1377,8 @@
     else bar.hidden = true;
   }
 
-  /* ---------- DeepSeek 真实修改（仅文字内容） ---------- */
-  const KEY_STORE = 'lingxi_deepseek_key';
+  /* ---------- 百炼真实修改（仅文字内容） ---------- */
+  const KEY_STORE = 'lingxi_bailian_key';
   const getApiKey = () => localStorage.getItem(KEY_STORE) || '';
   // 选区交互方案：A 双按钮 / B 仅发送+hover提示 / C = B + 工具栏外置添加
   const SEL_MODE_STORE = 'lingxi_sel_mode';
@@ -1389,16 +1389,16 @@
     C: '在方案 B 基础上，悬浮工具栏增加「添加到对话」，一键把选区加入输入框。',
   };
 
-  async function callDeepSeek(system, user) {
+  async function callBailian(system, user) {
     const key = getApiKey();
     if (!key) return { error: 'nokey' };
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 30000);
     try {
-      const res = await fetch('https://api.deepseek.com/chat/completions', {
+      const res = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
-        body: JSON.stringify({ model: 'deepseek-chat', temperature: 0.3, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }),
+        body: JSON.stringify({ model: 'qwen-flash', enable_thinking: false, max_tokens: 4096, temperature: 0.3, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }),
         signal: ctrl.signal,
       });
       if (!res.ok) return { error: 'HTTP ' + res.status };
@@ -1442,10 +1442,10 @@
       const payload = {};
       (sel.cells || []).forEach((c) => { payload[c.addr] = c.v; });
       const instr = sel.instruction || '校对并规范化这些单元格的文字与数字，保持数据含义不变';
-      return callDeepSeek(SYS_GRID, '单元格：\n' + JSON.stringify(payload) + '\n\n修改要求：\n' + instr);
+      return callBailian(SYS_GRID, '单元格：\n' + JSON.stringify(payload) + '\n\n修改要求：\n' + instr);
     }
     const instr = sel.instruction || '润色这段文字，保持原意与大致篇幅';
-    return callDeepSeek(SYS_TEXT, '原文：\n' + sel.text + '\n\n修改要求：\n' + instr);
+    return callBailian(SYS_TEXT, '原文：\n' + sel.text + '\n\n修改要求：\n' + instr);
   }
 
   function applyAnchorIn(rootEl, selId, aiText) {
@@ -1609,7 +1609,7 @@
     });
     // 清理后把当前显示的干净 DOM 同步回文档数据，避免锚点残留进存储内容
     saveCanvasEdits();
-    if (!hasKey) toast('未设置 DeepSeek API Key：侧栏「设置」中配置后可真实修改文档，本次按演示流程处理');
+    if (!hasKey) toast('未设置百炼 API Key：侧栏「设置」中配置后可真实修改文档，本次按演示流程处理');
     else if (okN + badN) toast('AI 已修改 ' + okN + ' 处' + (badN ? '，' + badN + ' 处未应用（调用失败或定位不到）' : ''));
 
     // 文件更新预览阶段（输入框仍锁定）：内容区白屏 loading
@@ -1870,7 +1870,7 @@
     $$('.pro-pill').forEach((b) => b.onclick = () => toast('原型演示：模式切换暂未接入'));
     $('#status-row').onclick = () => toast('原型演示：状态详情暂未接入');
 
-    // DeepSeek API Key 设置
+    // 百炼 API Key 设置
     $('#btn-settings').onclick = () => {
       $('#key-input').value = getApiKey();
       syncModeUI();
