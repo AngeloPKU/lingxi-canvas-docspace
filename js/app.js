@@ -1404,12 +1404,14 @@
       if (!res.ok) {
         const detail = await res.json().catch(() => ({}));
         const code = String(detail.error?.code || '').replace(/[^a-zA-Z0-9_.-]/g, '').slice(0, 80);
+        console.warn('百炼请求失败', res.status, code);
         return { error: 'HTTP ' + res.status + (code ? ' / ' + code : '') };
       }
       const j = await res.json();
       const t = ((j.choices || [])[0] || {}).message ? j.choices[0].message.content : '';
       return String(t || '').trim() ? { text: String(t).trim() } : { error: 'empty' };
     } catch (err) {
+      console.warn('百炼网络请求失败', err?.name, err?.message);
       return { error: err?.name === 'AbortError' ? '请求超时，请重试' : '网络连接失败，请检查网络后重试' };
     } finally { clearTimeout(timer); }
   }
