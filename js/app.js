@@ -1401,12 +1401,16 @@
         body: JSON.stringify({ model: 'qwen-flash', enable_thinking: false, max_tokens: 4096, temperature: 0.3, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }),
         signal: ctrl.signal,
       });
-      if (!res.ok) return { error: 'HTTP ' + res.status };
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        const code = String(detail.error?.code || '').replace(/[^a-zA-Z0-9_.-]/g, '').slice(0, 80);
+        return { error: 'HTTP ' + res.status + (code ? ' / ' + code : '') };
+      }
       const j = await res.json();
       const t = ((j.choices || [])[0] || {}).message ? j.choices[0].message.content : '';
       return String(t || '').trim() ? { text: String(t).trim() } : { error: 'empty' };
     } catch (err) {
-      return { error: String((err && err.message) || err) };
+      return { error: err?.name === 'AbortError' ? '请求超时，请重试' : '网络连接失败，请检查网络后重试' };
     } finally { clearTimeout(timer); }
   }
 
@@ -1610,7 +1614,10 @@
     // 清理后把当前显示的干净 DOM 同步回文档数据，避免锚点残留进存储内容
     saveCanvasEdits();
     if (!hasKey) toast('未设置百炼 API Key：侧栏「设置」中配置后可真实修改文档，本次按演示流程处理');
-    else if (okN + badN) toast('AI 已修改 ' + okN + ' 处' + (badN ? '，' + badN + ' 处未应用（调用失败或定位不到）' : ''));
+    else if (okN + badN) {
+      const error = results.find((r) => r.res.error)?.res.error;
+      toast('AI 已修改 ' + okN + ' 处' + (badN ? '，' + badN + ' 处未应用（' + (error || '未能定位选区或解析结果') + '）' : ''));
+    }
 
     // 文件更新预览阶段（输入框仍锁定）：内容区白屏 loading
     affected.forEach((d) => { d.editing = false; d.updating = true; });
@@ -1623,7 +1630,9 @@
 
     // 完成回复：只此一句 + 一套操作栏
     $('#status-text').textContent = '灵犀正在回复中…';
-    const ans = '好的，已修改完成。';
+    const ans = !hasKey ? '本次为演示流程，配置百炼 API Key 后可真实修改文档。'
+      : badN ? (okN ? '已修改 ' + okN + ' 处，另有 ' + badN + ' 处未能完成，请重试。' : '本次修改未能完成，请检查 API Key 和网络后重试。')
+      : '好的，已修改完成。';
     await typeText(sh.answer, ans);
     $('#status-text').textContent = '灵犀已就绪';
     renderActions(sh.block, ans);
