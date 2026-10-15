@@ -4,14 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>灵犀 · 文档空间</title>
-<link rel="stylesheet" href="css/kdesign/tokens.css">
-<link rel="stylesheet" href="css/kdesign/reset.css">
-<link rel="stylesheet" href="css/style.css">
-<link rel="stylesheet" href="css/kdesign/button.css">
-<link rel="stylesheet" href="css/kdesign/menu.css">
-  <link rel="stylesheet" href="css/kdesign/checkbox.css">
-  <link rel="stylesheet" href="css/kdesign/switch.css">
-<link rel="stylesheet" href="css/docspace.css">
+<link rel="stylesheet" href="css/kdesign/tokens.css?v=20261015-docspace-725277b805">
+<link rel="stylesheet" href="css/kdesign/reset.css?v=20261015-docspace-725277b805">
+<link rel="stylesheet" href="css/style.css?v=20261015-docspace-725277b805">
+<link rel="stylesheet" href="css/kdesign/button.css?v=20261015-docspace-725277b805">
+<link rel="stylesheet" href="css/kdesign/menu.css?v=20261015-docspace-725277b805">
+  <link rel="stylesheet" href="css/kdesign/checkbox.css?v=20261015-docspace-725277b805">
+  <link rel="stylesheet" href="css/kdesign/switch.css?v=20261015-docspace-725277b805">
+<link rel="stylesheet" href="css/docspace.css?v=20261015-docspace-725277b805">
+<link rel="stylesheet" href="css/composer-tools.css?v=20261015-docspace-725277b805">
+<link rel="stylesheet" href="css/workbench.css?v=20261015-docspace-725277b805">
 </head>
 <body>
 <div class="window">
@@ -75,7 +77,7 @@
             <textarea id="home-input" spellcheck="false" placeholder="描述一个复杂目标，灵犀会规划、执行并汇报进度"></textarea>
             <div class="composer-bar">
               <div class="bar-left">
-                <button class="icon-btn" id="home-plus" title="添加"><img src="assets/icons/symbol_cross.svg" width="16" height="16" alt=""></button>
+                <button class="icon-btn" id="home-plus" data-composer-plus="home" title="添加"><img src="assets/icons/symbol_cross.svg" width="16" height="16" alt=""></button>
                 <button class="exp-pill" title="专家模式">
                   <img src="assets/icons/knowledge_graph.svg" width="16" height="16" alt="">
                   <span>专家模式：开</span>
@@ -115,6 +117,7 @@
           <div class="chat-top-btns">
             <button class="light-btn round" id="btn-share"><img src="assets/icons/share_to.svg" width="16" height="16" alt=""><span>分享</span></button>
             <button class="light-btn r8" id="btn-space"><img src="assets/icons/archive.svg" width="16" height="16" alt=""><span>任务空间</span></button>
+            <button class="cv-icon-btn" id="btn-canvas-restore" title="展开右侧栏" aria-label="展开右侧栏" aria-controls="canvas-panel" aria-expanded="false"><img src="assets/icons/sidebar_left.svg" width="16" height="16" alt=""></button>
           </div>
         </div>
 
@@ -130,10 +133,11 @@
           </div>
           <div class="composer-wrap" id="chat-composer-wrap">
             <div class="composer">
+              <div id="chat-attachments" class="ds-attachments composer-attachments" aria-label="待发送文件" hidden></div>
               <div class="composer-input" id="chat-input" contenteditable="true" spellcheck="false" data-placeholder="描述一个复杂目标，灵犀会规划、执行并汇报进度"></div>
               <div class="composer-bar">
                 <div class="bar-left">
-                  <button class="icon-btn" title="添加"><img src="assets/icons/symbol_cross.svg" width="16" height="16" alt=""></button>
+                  <button class="icon-btn" id="chat-plus" data-composer-plus="chat" title="添加"><img src="assets/icons/symbol_cross.svg" width="16" height="16" alt=""></button>
                   <button class="exp-pill" title="专家模式">
                     <img src="assets/icons/knowledge_graph.svg" width="16" height="16" alt="">
                     <span>专家模式：开</span>
@@ -155,15 +159,15 @@
 
       <!-- ===== Canvas 分屏面板（规格取自 Figma 21:3389 / 21:3999） ===== -->
       <aside class="canvas-panel" id="canvas-panel" hidden>
-        <!-- 第一行：文件 tab + 关闭 / 全屏 / 收起侧栏 -->
+        <!-- 第一行：工作台与文件标签 / 全屏 / 收起右侧栏 -->
         <div class="canvas-row canvas-row1">
           <div class="canvas-row-left">
-            <div class="canvas-tabs" id="canvas-tabs"><!-- JS 渲染 --></div>
-            <button class="cv-icon-btn" id="btn-canvas-close" title="关闭"><img src="assets/icons/symbol_cross.svg" width="16" height="16" alt=""></button>
+            <div class="canvas-tabs" id="canvas-tabs" role="tablist" aria-label="Canvas 标签"><!-- JS 渲染 --></div>
+            <button class="cv-icon-btn" id="btn-canvas-add" title="添加文件" aria-label="添加文件"><img src="assets/icons/symbol_cross.svg" width="16" height="16" alt=""></button>
           </div>
           <div class="canvas-row-right">
             <button class="cv-icon-btn" id="btn-canvas-expand" title="全屏显示"><img src="assets/icons/screen_expand.svg" width="16" height="16" alt=""></button>
-            <button class="cv-icon-btn" id="btn-canvas-sidebar" title="收起侧栏"><img src="assets/icons/sidebar_left.svg" width="16" height="16" alt=""></button>
+            <button class="cv-icon-btn" id="btn-canvas-sidebar" title="收起侧栏" aria-label="收起侧栏" aria-controls="canvas-panel" aria-expanded="true"><img src="assets/icons/sidebar_left.svg" width="16" height="16" alt=""></button>
           </div>
         </div>
         <!-- 第二行：文件名 + 分享/下载/更多 -->
@@ -235,7 +239,7 @@
               <div class="composer-input" id="ds-input" contenteditable="true" spellcheck="false" role="textbox" aria-label="描述新任务" aria-multiline="true" data-placeholder="描述一个复杂目标，灵犀会规划、执行并汇报进度"></div>
               <div class="composer-bar">
                 <div class="bar-left">
-                  <button class="icon-btn" id="ds-plus" title="添加"><img src="assets/icons/symbol_cross.svg" width="16" height="16" alt=""></button>
+                  <button class="icon-btn" id="ds-plus" data-composer-plus="docspace" title="添加"><img src="assets/icons/symbol_cross.svg" width="16" height="16" alt=""></button>
                   <button class="exp-pill" title="专家模式"><img src="assets/icons/knowledge_graph.svg" width="16" height="16" alt=""><span>专家模式：开</span></button>
                   <button class="icon-btn" title="安全保护"><img src="assets/icons/shield.svg" width="16" height="16" alt=""></button>
                 </div>
@@ -332,7 +336,7 @@
           <button class="kd-segmented-item" data-rmode="B">全屏气泡</button>
         </div>
         <div class="kd-modal-hint" id="reply-mode-hint"></div>
-        <div class="ds-setting-row"><label class="kd-field-label" for="preview-composer-switch">文档空间全屏输入框</label><label class="kd-switch"><input type="checkbox" class="kd-switch-original" id="preview-composer-switch" role="switch" aria-label="文档空间全屏输入框" checked><span class="kd-switch-handle"></span></label></div>
+        <div class="ds-setting-row"><label class="kd-field-label" for="preview-composer-switch">文档空间使用 mini 输入框</label><label class="kd-switch"><input type="checkbox" class="kd-switch-original" id="preview-composer-switch" role="switch" aria-label="文档空间使用 mini 输入框" checked><span class="kd-switch-handle"></span></label></div>
         <div class="kd-modal-hint" id="preview-mode-hint"></div>
         <label class="kd-field-label" for="key-input" style="margin-top:12px;">阿里云百炼 API Key</label>
         <input class="kd-field-input" id="key-input" type="password" placeholder="sk-…" autocomplete="off" spellcheck="false">
@@ -346,9 +350,10 @@
   </div>
 </div>
 
-<script src="js/data.js"></script>
-<script src="js/icons-docspace.js"></script>
-<script src="js/docspace.js"></script>
-<script src="js/app.js?v=20261015-bailian-4"></script>
+<script src="js/data.js?v=20261015-docspace-725277b805"></script>
+<script src="js/icons-docspace.js?v=20261015-docspace-725277b805"></script>
+<script src="js/composer-tools.js?v=20261015-docspace-725277b805"></script>
+<script src="js/docspace.js?v=20261015-docspace-725277b805"></script>
+<script src="js/app.js?v=20261015-docspace-725277b805"></script>
 </body>
 </html>

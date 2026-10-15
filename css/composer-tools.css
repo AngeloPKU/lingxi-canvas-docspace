@@ -1,0 +1,51 @@
+.composer-tools-menu { position: fixed; z-index: 700; width: 220px; color: var(--kd-color-text-primary); font-family: var(--font); font-size: var(--kd-font-size-base); }
+.composer-menu-panel { width: 220px; }
+.composer-menu-row { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; text-align: left; }
+.composer-menu-row > img { flex: 0 0 16px; }
+.composer-menu-row .kd-menu-item-content { flex: 1; }
+.environment-current { color: var(--kd-color-text-tertiary); }
+.environment-submenu { position: absolute; left: calc(100% - 4px); width: 288px; }
+.submenu-left .environment-submenu { left: auto; right: calc(100% - 4px); }
+.environment-hint { padding: 8px; font-size: var(--kd-font-size-small); color: var(--kd-color-text-secondary); }
+.environment-option { display: flex; align-items: flex-start; gap: 8px; width: 100%; padding: 12px 8px; text-align: left; }
+.environment-option > span { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.environment-option small { font-size: var(--kd-font-size-small); color: var(--kd-color-text-secondary); }
+.environment-option:disabled { opacity: var(--kd-opacity-disabled); cursor: not-allowed; }
+.composer-attachments { padding: 12px 12px 0; }
+.composer-attachments .ds-attachment { width: 232px; }
+.attachment-static { cursor: default; }
+.attachment-static:hover { background: transparent; }
+.composer.compact { flex-wrap: wrap; }
+.composer.compact .composer-attachments { flex: 0 0 100%; order: 0; padding: 0 0 8px; max-height: 136px; }
+.mock-file-mask { position: fixed; inset: 0; z-index: 900; display: flex; align-items: center; justify-content: center; background: var(--kd-color-mask-regular); padding: 16px; }
+.mock-file-dialog { width: min(880px, 100%); height: min(552px, calc(100vh - 32px)); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--kd-color-line-regular); border-radius: var(--kd-border-radius-large); box-shadow: var(--kd-box-shadow-large); background: var(--kd-color-background-base); font-family: var(--font); font-size: var(--kd-font-size-base); color: var(--kd-color-text-primary); }
+.mock-file-titlebar { display: flex; align-items: center; justify-content: space-between; min-height: 40px; padding-left: 16px; }
+.mock-file-titlebar > span { font-weight: var(--kd-font-weight-bold); }
+.mock-close { height: 40px; width: 48px; display: flex; align-items: center; justify-content: center; }
+.mock-close:hover { background: var(--kd-color-fill-regular); }
+.mock-file-addressbar { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: var(--kd-color-fill-base); }
+.mock-file-addressbar button { padding: 4px; display: flex; }
+#mock-address { flex: 1; min-width: 0; border: 1px solid var(--kd-color-line-regular); padding: 8px 12px; border-radius: var(--kd-border-radius-middle); }
+.mock-search { color: var(--kd-color-text-tertiary); padding: 8px 12px; border: 1px solid var(--kd-color-line-regular); border-radius: var(--kd-border-radius-middle); }
+.mock-file-body { display: flex; flex: 1; min-height: 0; padding: 8px; gap: 8px; }
+.mock-file-sidebar { width: 144px; flex-shrink: 0; display: flex; flex-direction: column; background: var(--kd-color-fill-base); padding: 8px 4px; border-radius: var(--kd-border-radius-middle); }
+.mock-file-sidebar button { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--kd-border-radius-middle); text-align: left; }
+.mock-file-sidebar button:hover, .mock-file-sidebar button.active { background: var(--kd-color-fill-regular); }
+.mock-file-main { flex: 1; min-width: 0; background: var(--kd-color-fill-base); border-radius: var(--kd-border-radius-middle); overflow: auto; }
+.mock-file-head { display: grid; grid-template-columns: minmax(180px, 1fr) 136px 112px 64px; gap: 8px; padding: 12px 16px; color: var(--kd-color-text-secondary); font-size: var(--kd-font-size-small); min-width: 548px; }
+.mock-file-row { width: 100%; min-width: 548px; display: grid; grid-template-columns: 24px minmax(148px, 1fr) 136px 112px 64px; gap: 8px; align-items: center; min-height: 40px; padding: 8px 16px; text-align: left; }
+.mock-file-row > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mock-file-row > span:nth-last-child(-n+3) { color: var(--kd-color-text-secondary); font-size: var(--kd-font-size-small); }
+.mock-file-row:hover { background: var(--kd-color-fill-regular); }
+.mock-file-row.selected { background: var(--kd-color-public-light); }
+.mock-file-footer { padding: 8px 16px 16px; display: grid; grid-template-columns: 80px minmax(0, 1fr) 208px; gap: 8px; align-items: center; }
+.mock-file-footer input, .mock-file-footer select { min-width: 0; width: 100%; height: 28px; padding: 4px 8px; background: var(--kd-color-fill-base); color: var(--kd-color-text-primary); border: 1px solid var(--kd-color-line-regular); border-radius: var(--kd-border-radius-middle); font: inherit; }
+.mock-file-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.mock-file-actions .kd-button { min-width: 88px; }
+.mock-picker-tip { font-size: var(--kd-font-size-small); color: var(--kd-color-text-tertiary); }
+.mock-file-row:focus-visible, .mock-file-sidebar button:focus-visible, .mock-close:focus-visible { outline: 1px solid var(--kd-color-line-public); outline-offset: -1px; }
+.image-preview { height: 100%; display: flex; align-items: center; justify-content: center; padding: 32px; overflow: auto; background: var(--kd-color-background-base); }
+.image-preview img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: var(--kd-box-shadow-small); }
+.web-preview { height: 100%; width: 100%; border: 0; background: var(--kd-color-fill-base); }
+.url-card { display: flex; align-items: center; gap: 8px; margin-top: 16px; padding: 12px 16px; border: 1px solid var(--kd-color-line-light); border-radius: var(--kd-border-radius-large); background: var(--kd-color-fill-base); color: var(--kd-color-text-public); font: inherit; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 760px) { .mock-file-sidebar { width: 112px; } .mock-search { display: none; } .mock-file-footer { grid-template-columns: 64px minmax(0,1fr); } .mock-file-footer select { grid-column: 2; } .mock-file-actions { grid-column: 2; } .mock-picker-tip { display: none; } }

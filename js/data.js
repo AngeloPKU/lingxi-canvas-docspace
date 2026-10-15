@@ -26,7 +26,7 @@ const MENU = [
     ],
   },
   {
-    title: '最近', act: 'filter_mail', dynamic: true,
+    title: '历史任务', act: 'filter_mail', dynamic: true,
     items: [
       { id: 'r1', text: '苹果和谷歌合作的具体时间是什么时候？…', song: true, pin: true, action: 'openSeed', seed: 0 },
       { id: 'r2', text: '灵犀技能列表按工作场景推荐说明', action: 'openSeed', seed: 2 },
@@ -95,6 +95,11 @@ const SEEDS = [
 
 /* ============ 通用回复模板（任意输入） ============ */
 function buildReply(userText) {
+  if (/网页|网站|网址|看板|url/i.test(userText)) {
+    const urlDoc = MockFiles.webDocument();
+    return { stepsHead: '创建了 1 个网页', steps: [{ title: '整理内容', detail: '组织工作台信息' }, { title: '生成网页', detail: '完成页面布局' }],
+      answer: '已生成项目工作台，点击下方链接查看。', urlDoc, reco: ['调整工作台的展示内容'] };
+  }
   // 「仔细思考」：超长流式回复，方便检验全屏/分屏切换续流
   if (/仔细思考/.test(userText)) {
     return {
@@ -582,3 +587,9 @@ const DEMO_SEED = (() => {
     ],
   };
 })();
+
+/* ---------- 图片预览 ---------- */
+DOC_TEMPLATES.image = {
+  ext: '.svg',
+  html: () => '<div class="image-preview"><img src="assets/demo/team-workflow.svg" alt="团队协作流程图"></div>'
+};

@@ -5,7 +5,7 @@
 
   /* ---------- 状态 ---------- */
   // session: { id, title, messages: [{role:'user',text} | {role:'ai',reply}] }
-  let sessions = [];        // 用户发起的会话（在侧栏「新建」上方插入）
+  let sessions = [];        // 历史任务与正在查看的会话
   let currentId = null;     // null = 首页
   let running = false;
   const previewId = new URLSearchParams(location.search).get('preview');
@@ -17,7 +17,44 @@
   let previewPublishTimer = null;
   let homeFiles = [];
   let homeSegments = [];
-  const openedSeeds = new Set();  // 已打开的种子会话，避免列表重复
+  const previewInstance = new URLSearchParams(location.search).get('instance') || previewId;
+  const MINI_VISIBILITY_KEYS = { docspace: 'lingxi_mini_visible_docspace_demo-user', chat: 'lingxi_mini_visible_chat_demo-user' };
+  const miniContext = () => previewId ? 'docspace' : 'chat';
+  const isMini = () => !!previewId || $('.main').classList.contains('canvas-full');
+  let lastSentClock = Date.now();
+  let nextExecutionEnvironment = null;
+  function touchSession(session) {
+    session.lastSentAt = lastSentClock = Math.max(Date.now(), lastSentClock + 1, (session.lastSentAt || 0) + 1);
+    session.requestId = previewId ? previewMessageId : uid();
+    session.requestOwner = previewId ? 'preview' : 'parent';
+    session.streaming = true;
+    session.environment = nextExecutionEnvironment || (isMini() ? 'local' : ComposerTools.environment());
+    nextExecutionEnvironment = null;
+    renderMenu();
+  }
+  function applyMiniVisibility() {
+    if (!isMini()) return;
+    const available = !previewId || previewComposerOn;
+    const visible = available && localStorage.getItem(MINI_VISIBILITY_KEYS[miniContext()]) !== 'hidden';
+    $('#canvas-float-composer').hidden = !available;
+    $('#canvas-float-composer').classList.toggle('fc-hidden', !visible);
+    $('#canvas-float-reply').classList.toggle('fc-hidden', !visible);
+    $('#canvas-float-showzone').hidden = !available || visible;
+  }
+  function setMiniVisible(visible, broadcast = true) {
+    localStorage.setItem(MINI_VISIBILITY_KEYS[miniContext()], visible ? 'visible' : 'hidden');
+    applyMiniVisibility();
+    if (previewId && broadcast) previewPost('composer-visibility', { visible });
+  }
+  function revealMiniForSelection() { if (isMini() && (!previewId || previewComposerOn)) setMiniVisible(true); }
+  function renderChatFiles() {
+    const session = currentSession(); const files = session?.draftFiles || [];
+    ComposerTools.renderFiles($('#chat-attachments'), files, { preview: !isMini(),
+      onOpen: (doc) => openCanvasTab(doc),
+      onRemove: (doc) => { session.draftFiles = files.filter((f) => f.id !== doc.id); renderChatFiles(); } });
+  }
+  const mergeFiles = (...groups) => [...new Map(groups.flat().filter(Boolean).map((doc) => [doc.id, doc])).values()];
+
 
   /* Canvas 分屏状态：tab 跟随会话保存，切会话时还原 */
   // canvasState = { tabs: [doc], activeId: docId }（挂在 session 对象上）
@@ -62,7 +99,7 @@
   function publishPreview() {
     clearTimeout(previewPublishTimer); previewPublishTimer = null;
     const s = currentSession();
-    if (!previewId || !s?.fromPreview) return;
+    if (!s || (previewId ? (!s.fromPreview || s.requestOwner !== 'preview') : (!s.previewSource || s.requestOwner !== 'parent'))) return;
     const messages = s.messages.map((m) => m.segments ? { ...m, segments: plainSegments(m.segments) } : m);
     if (running && previewLiveShell) {
       const sh = previewLiveShell;
@@ -72,8 +109,9 @@
         answer: sh.answer.textContent, streaming: true,
       } });
     }
-    const snapshot = { id: s.id, title: s.title, messages, contextFiles: s.contextFiles, previewSource: previewId, streaming: running, revision: ++previewRevision };
-    previewPost('preview-sync', { session: JSON.parse(JSON.stringify(snapshot)) });
+    const snapshot = { id: s.id, title: s.title, messages, contextFiles: s.contextFiles, previewSource: previewId || s.previewSource, previewInstance: previewId ? previewInstance : s.previewInstance, streaming: running, revision: ++previewRevision, lastSentAt: s.lastSentAt, requestId: s.requestId, requestOwner: s.requestOwner };
+    if (previewId) previewPost('preview-sync', { session: JSON.parse(JSON.stringify(snapshot)) });
+    else Docspace.updatePreviewSession(snapshot);
   }
 
   function queuePreviewPublish() {
@@ -83,13 +121,39 @@
   function preparePreviewRequest(text) {
     if (!previewId) return;
     saveCanvasEdits();
-    const previous = canvasState();
-    const doc = displayedDoc;
-    const s = { id: uid(), title: text.slice(0, 20) || '文档编辑', messages: [], fromPreview: true,
-      contextFiles: doc ? [doc] : [], canvas: { tabs: [...(previous?.tabs || [])], activeId: previous?.activeId } };
-    sessions.unshift(s); currentId = s.id; previewMessageId = uid(); previewLiveShell = null;
-    $('#feed').innerHTML = ''; $('#fr-stream').innerHTML = '';
+    let session = currentSession();
+    if (!session?.fromPreview) {
+      const previous = canvasState();
+      session = { id: uid(), title: text.slice(0, 20) || '文档编辑', messages: [], fromPreview: true,
+        contextFiles: displayedDoc ? [displayedDoc] : [], canvas: { tabs: [...(previous?.tabs || [])], activeId: previous?.activeId } };
+      sessions.unshift(session); currentId = session.id;
+      $('#feed').innerHTML = ''; $('#fr-stream').innerHTML = '';
+    }
+    previewMessageId = uid(); previewLiveShell = null;
     $$('.preview-open-chat').forEach((b) => b.hidden = false);
+  }
+
+  function receiveLinkedSession(incoming) {
+    if (running || incoming.previewInstance !== previewInstance) return;
+    const current = currentSession();
+    if (current?.fromPreview && (incoming.lastSentAt < current.lastSentAt || (incoming.lastSentAt === current.lastSentAt && incoming.revision <= (current.parentRevision || 0)))) return;
+    saveCanvasEdits();
+    const st = canvasState();
+    let session = sessions.find((item) => item.id === incoming.id);
+    if (!session) { session = {}; sessions.unshift(session); }
+    const draftFiles = current?.draftFiles || [];
+    Object.assign(session, incoming, { fromPreview: true, parentRevision: incoming.revision, canvas: st, draftFiles });
+    currentId = session.id;
+    const source = st?.tabs.find((doc) => doc.id === previewId);
+    const updated = incoming.contextFiles?.find((doc) => doc.id === previewId);
+    if (source && updated) { displayedDoc = null; Object.assign(source, updated); }
+    previewMessageId = [...session.messages].reverse().find((m) => m.role === 'user')?.id;
+    rebuildFeed();
+    const blocks = $('#feed').querySelectorAll('.ai-block');
+    $('#fr-stream').innerHTML = '';
+    if (blocks.length) { $('#fr-stream').appendChild(blocks[blocks.length - 1]); $('#canvas-float-reply').hidden = false; }
+    $$('.preview-open-chat').forEach((button) => button.hidden = false);
+    applyPreviewMode(); setSending(false);
   }
 
   function applyPreviewMode() {
@@ -97,26 +161,22 @@
     document.body.classList.toggle('preview-no-composer', !previewComposerOn);
     $('#btn-preview-add-chat').hidden = previewComposerOn;
     $('#canvas-float-composer').hidden = !previewComposerOn;
-    $('#canvas-float-showzone').hidden = true;
     $('#canvas-float-reply').hidden = !previewComposerOn || !$('#fr-stream .ai-block');
+    applyMiniVisibility();
   }
 
   function syncPreviewModeUI() {
     const input = $('#preview-composer-switch');
     input.checked = previewComposerOn;
     input.parentElement.classList.toggle('is-checked', previewComposerOn);
-    $('#preview-mode-hint').textContent = previewComposerOn ? '预览中显示全屏输入框；发送后在左侧新建对话，保持当前文件预览。' : '预览中隐藏全屏输入框；添加选区会回到新任务页，直接发送会新建并进入对话。';
+    $('#preview-mode-hint').textContent = previewComposerOn ? '使用 mini 输入框；同一次打开文档连续提问，复用同一个历史任务。' : '旧版无输入框方案：添加选区回到新任务页，直接发送新建并进入完整对话。';
   }
 
   function renderHomeFiles() {
-    const host = $('#home-attachments'); host.innerHTML = ''; host.hidden = !homeFiles.length;
-    homeFiles.forEach((doc) => {
-      const card = el('div', 'ds-attachment');
-      card.innerHTML = `<button class="ds-attachment-open" title="${esc(doc.name)}"><img src="assets/icons/${TYPE_ICONS[doc.type].name}.svg" width="24" height="24" alt=""><span class="ds-attachment-info"><span class="ds-attachment-name">${esc(doc.name.replace(/\.[^.]+$/, ''))}</span><span class="ds-attachment-size">${esc(doc.size || '')}</span></span></button><button class="ds-attachment-remove" title="移除文件" aria-label="移除 ${esc(doc.name)}"><img src="assets/icons/symbol_cross_two.svg" width="16" height="16" alt=""></button>`;
-      card.querySelector('.ds-attachment-open').onclick = () => Docspace.openPreview(doc.id);
-      card.querySelector('.ds-attachment-remove').onclick = () => { homeFiles = homeFiles.filter((d) => d.id !== doc.id); homeSegments = homeSegments.filter((sg) => sg.t !== 'sel' || sg.sel.doc.id !== doc.id); renderHomeFiles(); };
-      host.appendChild(card);
-    });
+    const host = $('#home-attachments');
+    ComposerTools.renderFiles(host, homeFiles, { preview: false, onRemove: (doc) => {
+      homeFiles = homeFiles.filter((d) => d.id !== doc.id); homeSegments = homeSegments.filter((sg) => sg.t !== 'sel' || sg.sel.doc.id !== doc.id); renderHomeFiles();
+    } });
     const selections = $('#home-selection'); selections.innerHTML = ''; selections.hidden = !homeSegments.length;
     homeSegments.forEach((sg) => {
       if (sg.t !== 'sel') return;
@@ -156,7 +216,9 @@
     if (data?.channel !== 'lingxi-docspace') return;
     if (previewId) {
       if (event.source !== window.parent) return;
-      if (data.type === 'preview-mode') { previewComposerOn = data.enabled; $('#canvas-float-composer').classList.remove('fc-hidden'); $('#canvas-float-reply').classList.remove('fc-hidden'); applyPreviewMode(); }
+      if (data.type === 'preview-mode') { previewComposerOn = data.enabled; applyPreviewMode(); }
+      if (data.type === 'composer-visibility') { setMiniVisible(data.visible, false); }
+      if (data.type === 'session-sync') { receiveLinkedSession(data.session); }
       if (data.type === 'preview-doc' && !running && displayedDoc?.id === data.doc.id) {
         const doc = displayedDoc; displayedDoc = null;
         Object.assign(doc, data.doc); renderCanvas();
@@ -165,18 +227,21 @@
     }
     const sourceId = Docspace.previewSource(event.source);
     if (!sourceId) return;
+    if (data.type === 'composer-visibility') { localStorage.setItem(MINI_VISIBILITY_KEYS.docspace, data.visible ? 'visible' : 'hidden'); Docspace.broadcastVisibility(data.visible); return; }
     if (data.type === 'preview-ready') { event.source.postMessage({ channel: 'lingxi-docspace', type: 'preview-mode', enabled: previewComposerOn }, '*'); return; }
     if (data.type === 'preview-sync' && data.session?.previewSource === sourceId) {
       const incoming = data.session;
       let s = sessions.find((entry) => entry.id === incoming.id);
-      if (s && (s.remoteComplete || incoming.revision <= s.revision)) return;
+      if (s && (incoming.lastSentAt < s.lastSentAt || (incoming.lastSentAt === s.lastSentAt && incoming.revision <= (s.previewRevision || 0)))) return;
       if (!s) { s = { canvas: { tabs: [], activeId: null } }; sessions.unshift(s); }
       (s.canvas?.tabs || []).forEach((doc) => {
         const updated = incoming.contextFiles?.find((file) => file.id === doc.id);
         if (updated) { if (displayedDoc === doc) displayedDoc = null; Object.assign(doc, updated); }
       });
-      Object.assign(s, incoming); s.remoteComplete = !incoming.streaming;
-      Docspace.setPreviewRunning(sourceId, incoming.streaming);
+      Object.assign(s, incoming, { previewRevision: incoming.revision });
+      const sourceDoc = incoming.contextFiles?.find((doc) => doc.id === sourceId);
+      if (sourceDoc) Docspace.cacheDoc(sourceDoc);
+      Docspace.setPreviewRunning(incoming.previewInstance, incoming.streaming);
       renderMenu();
       if (currentId === s.id && !$('#view-chat').hidden) { rebuildFeed(); $('#status-text').textContent = incoming.streaming ? '灵犀正在回复中…' : '灵犀已就绪'; setSending(running); }
     }
@@ -184,6 +249,7 @@
       const s = sessions.find((entry) => entry.id === data.sessionId && entry.previewSource === sourceId);
       if (!s) return;
       openSession(s.id);
+      if (data.doc) { if ($('.main').classList.contains('canvas-full')) setFullscreen(false); openCanvasTab(data.doc); }
       requestAnimationFrame(() => $('#feed [data-message-id="' + data.messageId + '"]')?.scrollIntoView({ block: 'center' }));
     }
     if (data.type === 'preview-add-chat' && data.doc?.id === sourceId) stageHomeDocument(data.doc, data.segments || []);
@@ -216,7 +282,7 @@
     const menu = $('#menu');
     menu.innerHTML = '';
 
-    // 第 0 组前插入「新对话区」：用户发起的会话
+    // 按菜单分组渲染入口与历史任务
     MENU.forEach((group, gi) => {
       const g = el('div', 'menu-group' + (gi === 0 ? ' first' : ''));
       if (group.title) {
@@ -235,12 +301,11 @@
         }
         g.appendChild(t);
       }
-      // 用户发起的会话显示在「最近」分组顶部
-      if (group.dynamic && sessions.length) {
-        sessions.forEach((s) => g.appendChild(sessionItem(s)));
+      if (group.dynamic) {
+        sessions.filter((s) => s.lastSentAt).slice().sort((a, b) => b.lastSentAt - a.lastSentAt).forEach((s) => g.appendChild(sessionItem(s)));
       }
       (group.items || []).forEach((it) => {
-        if (it.action === 'openSeed' && openedSeeds.has(it.seed)) return;
+        if (group.dynamic) return;
         g.appendChild(menuItem(it));
       });
       menu.appendChild(g);
@@ -250,9 +315,8 @@
   }
 
   function sessionItem(s) {
-    const b = el('button', 'menu-item' + (s.id === currentId && $('#view-docspace').hidden ? ' active' : ''));
+    const b = el('button', 'menu-item' + (s.id === currentId && !$('#view-chat').hidden ? ' active' : ''));
     b.dataset.sessionId = s.id;
-    b.appendChild(img('folder', 16));
     b.appendChild(el('span', 'txt', esc(s.title)));
     b.onclick = () => openSession(s.id);
     return b;
@@ -352,7 +416,7 @@
     $('#feed').appendChild(block);
     scrollBottom();
     const sh = { block, head, headText: head.querySelector('.sh-text'), detail, answer, reco };
-    if (previewId && running) { previewLiveShell = sh; block.dataset.messageId = previewMessageId + '-reply'; }
+    if (running) { previewLiveShell = sh; block.dataset.messageId = (previewMessageId || currentSession()?.requestId || uid()) + '-reply'; }
     return sh;
   }
 
@@ -406,6 +470,8 @@
     docx: { big: 'fmt_docx_40', tab: 'doc_ap', name: 'wps_format_s' },
     pptx: { big: 'fmt_pptx_40', tab: 'doc_wpp', name: 'wpp_format_s' },
     xlsx: { big: 'fmt_xlsx_40', tab: 'sheet_two', name: 'et_format_s' },
+    image: { big: 'pic', tab: 'pic', name: 'pic' },
+    web: { big: 'doc_file', tab: 'doc_file', name: 'doc_file' },
   };
   function docCard(doc) {
     const card = el('button', 'doc-card');
@@ -415,18 +481,30 @@
     info.appendChild(el('div', 'dc-type', doc.type));
     card.appendChild(info);
     card.title = '点击在右侧打开';
-    card.onclick = () => openCanvasTab(doc);
+    card.onclick = () => openReplyTarget(doc);
     return card;
+  }
+
+  function openReplyTarget(doc) {
+    if (previewId) { publishPreview(); previewPost('preview-open-chat', { sessionId: currentId, messageId: previewMessageId, doc }); }
+    else openCanvasTab(doc);
+  }
+  function urlCard(doc) {
+    const card = el('button', 'url-card'); card.appendChild(img('doc_file', 16)); card.appendChild(el('span', '', esc(doc.url)));
+    card.title = '打开 ' + doc.name; card.onclick = () => openReplyTarget(doc); return card;
   }
 
   /* ---------- Canvas 分屏 ---------- */
   // 当前正在显示的文档（编辑回写、事件委托都基于它）
   let displayedDoc = null;
+  const WORKBENCH_TAB_ID = '__lingxi_workbench__';
 
   function canvasState() {
     const s = currentSession();
     if (!s) return null;
-    if (!s.canvas) s.canvas = { tabs: [], activeId: null };
+    if (!s.canvas) s.canvas = { tabs: [], activeId: WORKBENCH_TAB_ID, collapsed: true };
+    if (s.canvas.collapsed == null) s.canvas.collapsed = !s.canvas.tabs.length;
+    if (!s.canvas.activeId) s.canvas.activeId = WORKBENCH_TAB_ID;
     return s.canvas;
   }
 
@@ -455,14 +533,14 @@
       st.tabs.push(doc);
       st.activeId = doc.id;
     }
-    $('#view-chat').classList.add('canvas-open');
-    $('#canvas-panel').hidden = false;
+    st.collapsed = false;
+    updateCanvasVisibility();
     renderCanvas();
   }
 
   function activateCanvasTab(id) {
     const st = canvasState();
-    if (!st || !st.tabs.some((t) => t.id === id)) return;
+    if (!st || (previewId && id === WORKBENCH_TAB_ID) || (id !== WORKBENCH_TAB_ID && !st.tabs.some((t) => t.id === id))) return;
     if (st.activeId === id) return;
     // 草稿期有待发送选区：先确认
     if (selById.size && st.tabs.find((t) => t.id === st.activeId) !== st.tabs.find((t) => t.id === id)) {
@@ -501,12 +579,12 @@
 
   function closeCanvasTab(id) {
     const st = canvasState();
-    if (!st) return;
+    if (!st || (previewId && id === previewId)) return;
     const idx = st.tabs.findIndex((t) => t.id === id);
     if (idx < 0) return;
+    saveCanvasEdits();
     st.tabs.splice(idx, 1);
-    if (!st.tabs.length) { closeCanvas(); return; }
-    if (st.activeId === id) st.activeId = st.tabs[Math.min(idx, st.tabs.length - 1)].id;
+    if (st.activeId === id) st.activeId = st.tabs[Math.min(idx, st.tabs.length - 1)]?.id || WORKBENCH_TAB_ID;
     renderCanvas();
   }
 
@@ -577,8 +655,8 @@
     else scrollBottom();
   }
 
-  function setFullscreen(on) {
-    if (flipLock) return;
+  function setFullscreen(on, force = false) {
+    if (flipLock && !force) return;
     $('.main').classList.toggle('canvas-full', on);
     // 全屏按钮状态：进入全屏 → 保持选中态
     const expandBtn = $('#btn-canvas-expand');
@@ -632,20 +710,35 @@
       }
       if (wrap.parentElement !== composerHome) composerHome.appendChild(wrap);
     }
-    applyPreviewMode();
+    applyPreviewMode(); applyMiniVisibility(); renderChatFiles();
   }
 
-  function closeCanvas() {
+  function updateCanvasVisibility() {
+    const visible = !!currentSession()?.canvas && !canvasState().collapsed;
+    $('#view-chat').classList.toggle('canvas-open', visible);
+    $('#canvas-panel').hidden = !visible;
+    $('#btn-canvas-restore').hidden = visible;
+    $('#btn-canvas-restore').setAttribute('aria-expanded', String(visible));
+  }
+
+  function collapseCanvas() {
     saveCanvasEdits();
     hideSelToolbar();
+    $('#sel-popover').hidden = true;
     clearXlsxRange();
-    if ($('.main').classList.contains('canvas-full')) setFullscreen(false);
+    if ($('.main').classList.contains('canvas-full')) setFullscreen(false, true);
     displayedDoc = null;
     const st = canvasState();
-    if (st) { st.tabs = []; st.activeId = null; }
-    $('#view-chat').classList.remove('canvas-open');
-    $('.main').classList.remove('canvas-full');
-    $('#canvas-panel').hidden = true;
+    if (st) st.collapsed = true;
+    updateCanvasVisibility();
+  }
+
+  function restoreCanvas() {
+    const st = canvasState();
+    if (!st) return;
+    st.collapsed = false;
+    updateCanvasVisibility();
+    renderCanvas();
   }
 
   // 切会话时还原该会话的 Canvas 状态
@@ -657,13 +750,74 @@
       const lastDoc = [...s.messages].reverse().find((m) => m.role === 'ai' && m.reply.doc);
       if (typeof setLastDocTopic === 'function') setLastDocTopic(lastDoc ? lastDoc.reply.doc.topic : '');
     }
-    if (st && st.tabs.length) {
-      $('#view-chat').classList.add('canvas-open');
-      $('#canvas-panel').hidden = false;
+    if (st && !st.collapsed) {
+      updateCanvasVisibility();
       renderCanvas();
     } else {
-      closeCanvas();
+      saveCanvasEdits();
+      displayedDoc = null;
+      hideSelToolbar();
+      if ($('.main').classList.contains('canvas-full')) setFullscreen(false, true);
+      updateCanvasVisibility();
     }
+  }
+
+  function renderWorkbench() {
+    const session = currentSession();
+    if (previewId || !session?.canvas || session.canvas.collapsed || session.canvas.activeId !== WORKBENCH_TAB_ID) return;
+    const content = $('#canvas-content');
+    const blocks = [...$('#feed').querySelectorAll('.ai-block'), ...$('#fr-stream').querySelectorAll('.ai-block')];
+    const latest = blocks[blocks.length - 1];
+    const reply = [...session.messages].reverse().find((message) => message.role === 'ai')?.reply;
+    const active = !!(session.streaming || running);
+    const steps = latest ? [...latest.querySelectorAll('.step-item')].map((node) => ({
+      title: node.querySelector('.step-title')?.textContent || '',
+      detail: node.querySelector('.step-status')?.textContent || '',
+      state: node.classList.contains('done') ? 'done' : node.classList.contains('running') ? 'running' : 'pending',
+    })) : (reply?.steps || []).map((step) => ({ ...step, state: step.state || 'done' }));
+    const signature = JSON.stringify([session.id, session.requestId, active, steps]);
+    if (content.dataset.workbench === signature && content.querySelector('.workbench')) return;
+    const opened = new Set([...content.querySelectorAll('.workbench-step[open]')].map((node) => node.dataset.step));
+    const completed = steps.filter((step) => step.state === 'done').length;
+    content.innerHTML = '';
+    content.dataset.workbench = signature;
+    const workbench = el('section', 'workbench');
+    workbench.setAttribute('aria-label', '灵犀工作台');
+    const header = el('header', 'workbench-header');
+    const identity = el('div', 'workbench-identity');
+    identity.append(img('lingxi_logo_s', 32), el('h2', '', '灵犀的工作台'), el('span', 'workbench-online', '<span></span>在线'));
+    header.append(identity, el('span', 'workbench-progress', steps.length ? `当前进度 ${completed}/${steps.length}` : active ? '正在准备' : '等待任务'));
+    const body = el('div', 'workbench-body');
+    workbench.append(header, body);
+    steps.forEach((step, index) => {
+      const row = el('details', 'workbench-step');
+      row.dataset.step = String(index);
+      row.open = opened.has(String(index));
+      const summary = el('summary', 'workbench-step-summary');
+      const status = el('span', 'workbench-step-state is-' + step.state, step.state === 'done' ? DOCSPACE_INLINE_ICONS.symbol_tick : '');
+      status.setAttribute('aria-label', { done: '已完成', running: '进行中', pending: '待执行' }[step.state]);
+      summary.append(status, el('span', 'workbench-step-title', esc(step.title)));
+      if (step.detail) {
+        const action = el('span', 'workbench-detail-action', '详情');
+        action.appendChild(img('arrow_right_s', 16)); summary.appendChild(action);
+        row.append(summary, el('div', 'workbench-step-detail', esc(step.detail)));
+      } else { row.appendChild(summary); }
+      body.appendChild(row);
+    });
+    if (active) {
+      const status = el('div', 'workbench-status');
+      status.append(el('span', 'workbench-step-state is-running'), el('span', '', steps.length && completed === steps.length ? '正在整理回复…' : '灵犀正在执行任务…'));
+      body.appendChild(status);
+    } else if (steps.length) {
+      const done = el('div', 'workbench-status');
+      done.append(el('span', 'workbench-step-state is-done', DOCSPACE_INLINE_ICONS.symbol_tick), el('span', '', '任务结束'));
+      body.appendChild(done);
+    } else {
+      const empty = el('div', 'workbench-empty');
+      empty.append(img('equipment_computer', 32), el('strong', '', '等待任务'), el('p', '', '发送消息后，可在这里查看灵犀的执行进度。'));
+      body.appendChild(empty);
+    }
+    content.appendChild(workbench);
   }
 
   function renderCanvas() {
@@ -671,23 +825,54 @@
     if (!st) return;
     // tab 条
     const strip = $('#canvas-tabs');
+    const scrollLeft = strip.scrollLeft;
     strip.innerHTML = '';
+    if (!previewId) {
+      const workbench = el('button', 'canvas-tab canvas-workbench-tab' + (st.activeId === WORKBENCH_TAB_ID ? ' active' : ''));
+      workbench.dataset.tabId = WORKBENCH_TAB_ID;
+      workbench.setAttribute('role', 'tab');
+      workbench.setAttribute('aria-selected', String(st.activeId === WORKBENCH_TAB_ID));
+      workbench.tabIndex = st.activeId === WORKBENCH_TAB_ID ? 0 : -1;
+      workbench.append(img('equipment_computer', 16), el('span', 'canvas-tab-name', '灵犀工作台'));
+      workbench.onclick = () => activateCanvasTab(WORKBENCH_TAB_ID);
+      strip.appendChild(workbench);
+    }
     st.tabs.forEach((t) => {
       const tab = el('button', 'canvas-tab' + (t.id === st.activeId ? ' active' : ''));
+      tab.dataset.tabId = t.id;
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-selected', String(t.id === st.activeId));
+      tab.tabIndex = t.id === st.activeId ? 0 : -1;
+      tab.title = t.name;
       const inb = el('div', 'canvas-tab-in');
-      inb.appendChild(img(TYPE_ICONS[t.type].tab, 16));
+      inb.appendChild(img(previewId ? TYPE_ICONS[t.type].name : TYPE_ICONS[t.type].tab, 16));
       inb.appendChild(el('span', 'canvas-tab-name', esc(t.name)));
       tab.appendChild(inb);
       const x = el('span', 'tab-x');
+      x.title = '关闭 ' + t.name;
+      x.setAttribute('aria-label', '关闭 ' + t.name);
       x.appendChild(img('symbol_cross_two', 16));
       tab.appendChild(x);
       tab.onclick = () => activateCanvasTab(t.id);
       x.onclick = (e) => { e.stopPropagation(); closeCanvasTab(t.id); };
       strip.appendChild(tab);
     });
-    // 当前文件
+    strip.scrollLeft = scrollLeft;
+    const activeTab = [...strip.children].find((tab) => tab.dataset.tabId === st.activeId);
+    if (st.activeId === WORKBENCH_TAB_ID) strip.scrollLeft = 0;
+    else if (activeTab) strip.scrollLeft = Math.max(0, activeTab.offsetLeft + activeTab.offsetWidth - strip.clientWidth);
+    // 工作台不参与文件保存、选区与附件上下文。
     const doc = st.tabs.find((t) => t.id === st.activeId);
-    if (!doc) { closeCanvas(); return; }
+    $('#canvas-panel').classList.toggle('workbench-active', !doc);
+    if (!doc) {
+      st.activeId = WORKBENCH_TAB_ID;
+      saveCanvasEdits();
+      displayedDoc = null;
+      hideSelToolbar();
+      clearXlsxRange();
+      renderWorkbench();
+      return;
+    }
     $('#canvas-file-icon').src = iconSrc(TYPE_ICONS[doc.type].name);
     $('#canvas-file-name').textContent = doc.path || doc.name;
     $('#canvas-file-name').title = doc.path || doc.name;
@@ -790,7 +975,7 @@
 
   function renderToolbar(type) {
     const bar = $('#canvas-toolbar');
-    bar.innerHTML = '';
+    bar.innerHTML = ''; bar.hidden = !TOOLBARS[type];
     (TOOLBARS[type] || []).forEach((item) => {
       if (item === '|') { bar.appendChild(el('span', 'tb-sep')); return; }
       if (item.sel) {
@@ -967,7 +1152,7 @@
     const range = s.getRangeAt(0);
     if (!$('#canvas-content').contains(range.commonAncestorContainer)) { hideSelToolbar(); return; }
     const doc = displayedDoc;
-    if (!doc || doc.type === 'xlsx') { hideSelToolbar(); return; }
+    if (!doc || !['docx', 'pptx'].includes(doc.type)) { hideSelToolbar(); return; }
     const text = s.toString().trim();
     if (!text) { hideSelToolbar(); return; }
     currentSel = { id: uid(), type: doc.type, text, doc, page: doc.type === 'pptx' && doc.cur != null ? doc.cur + 1 : null };
@@ -1331,6 +1516,7 @@
     clearNativeSel();
     clearXlsxRange();
     if (previewId && !previewComposerOn) { saveCanvasEdits(); previewPost('preview-add-chat', { doc: copy.doc, segments: plainSegments([{ t: 'sel', sel: copy }]) }); return; }
+    revealMiniForSelection();
     insertSelIntoComposer(copy, '');
   }
   function clearNativeSel() { getSelection().removeAllRanges(); }
@@ -1352,6 +1538,7 @@
       previewPost('preview-send-selection', { doc: sel.doc, segments: plainSegments(segs) });
       return;
     }
+    revealMiniForSelection();
     runSelFlow(segs);
   }
   function popAdd() {
@@ -1364,6 +1551,7 @@
     hideSelToolbar();
     clearXlsxRange();
     if (previewId && !previewComposerOn) { saveCanvasEdits(); previewPost('preview-add-chat', { doc: copy.doc, segments: plainSegments([{ t: 'sel', sel: copy }, { t: 'text', v: instruction }]) }); return; }
+    revealMiniForSelection();
     insertSelIntoComposer(copy, instruction);
   }
 
@@ -1527,7 +1715,7 @@
     if (running || currentSession()?.streaming) return;
     if (previewId) {
       preparePreviewRequest(segments.filter((sg) => sg.t === 'text').map((sg) => sg.v).join('') || '修改文档选区');
-      files = currentSession().contextFiles;
+      files = mergeFiles([displayedDoc], files);
     }
     if (!currentId) {
       const first = segments.find((s) => s.t === 'text');
@@ -1539,7 +1727,8 @@
     }
     showView('chat');
     const session = currentSession();
-    session.contextFiles = files;
+    touchSession(session);
+    session.contextFiles = mergeFiles(session.contextFiles || [], files);
     if (!previewId) files.forEach((doc) => doOpenCanvasTab(doc));
     session.messages.push({ role: 'user', id: previewMessageId || uid(), segments, files });
     renderUserMsg(segments, session.messages[session.messages.length - 1].id, files);
@@ -1634,6 +1823,7 @@
     $('#status-text').textContent = '灵犀已就绪';
     renderActions(sh.block, ans);
     session.messages.push({ role: 'ai', reply: { stepsHead: sh.headText.textContent, steps, answer: ans } });
+    session.streaming = false;
 
     running = false;
     setSending(false);
@@ -1644,15 +1834,17 @@
 
   function sendComposer() {
     if (running || currentSession()?.streaming) return;
-    // 全屏下发送：落点 A 退出全屏回分屏；落点 B 保持全屏、气泡接回复
+    const submittedFromMini = isMini();
+    const segs = composerSegments(), files = currentSession()?.draftFiles || [];
+    const hasSel = segs.some((part) => part.t === 'sel');
+    const textOnly = segs.filter((part) => part.t === 'text').map((part) => part.v).join('').trim();
+    if (!hasSel && !textOnly && !files.length) return;
+    nextExecutionEnvironment = submittedFromMini ? 'local' : ComposerTools.environment();
     if ($('.main').classList.contains('canvas-full') && getReplyMode() === 'A') setFullscreen(false);
-    const segs = composerSegments();
-    const hasSel = segs.some((s) => s.t === 'sel');
-    const textOnly = segs.filter((s) => s.t === 'text').map((s) => s.v).join('').trim();
-    if (!segs.length || (!hasSel && !textOnly)) return;
-    clearComposer();
-    if (!hasSel) { sendMessage(textOnly); return; }
-    runSelFlow(segs);
+    if (currentSession()) currentSession().draftFiles = [];
+    clearComposer(); renderChatFiles();
+    if (!hasSel) sendMessage(textOnly || '请查看这些文件', files);
+    else runSelFlow(segs, files);
   }
 
   /* ---------- 核心循环：发送 → mock 流式回复 ---------- */
@@ -1664,7 +1856,7 @@
   async function sendMessage(text, files = []) {
     text = (text || '').trim();
     if (!text || running || currentSession()?.streaming) return;
-    if (previewId) { preparePreviewRequest(text); files = currentSession().contextFiles; }
+    if (previewId) { preparePreviewRequest(text); files = mergeFiles([displayedDoc], files); }
     running = true;
     setSending(true);
 
@@ -1680,8 +1872,9 @@
     showView('chat');
 
     const session = currentSession();
+    touchSession(session);
     session.messages.push({ role: 'user', id: previewMessageId || uid(), text, files });
-    session.contextFiles = [...new Map([...(session.contextFiles || []), ...files].map((doc) => [doc.id, doc])).values()];
+    session.contextFiles = mergeFiles(session.contextFiles || [], files);
     renderUser(text, files, session.messages[session.messages.length - 1].id);
     $('#home-input').value = '';
     autosize($('#home-input'));
@@ -1725,10 +1918,12 @@
       if (!previewId) openCanvasTab(reply.doc);
     }
 
+    if (reply.urlDoc) sh.block.insertBefore(urlCard(reply.urlDoc), sh.reco);
     renderActions(sh.block, reply.answer);
     if (!floatMode) renderReco(sh.reco, reply.reco);
 
     session.messages.push({ role: 'ai', reply });
+    session.streaming = false;
     running = false;
     setSending(false);
     publishPreview();
@@ -1768,7 +1963,7 @@
     currentId = id;
     rebuildFeed();
     showView('chat');
-    renderMenu();
+    renderMenu(); renderChatFiles();
     setSending(running);
     $('#status-text').textContent = currentSession()?.streaming ? '灵犀正在回复中…' : '灵犀已就绪';
   }
@@ -1776,21 +1971,9 @@
   // 种子会话：即时构造 session
   function openSeed(i) {
     if (running) { toast('任务进行中，请稍候'); return; }
-    // 已打开过则直接切换
-    const existed = sessions.find((s) => s.id === 'seed' + i);
-    if (existed) { openSession(existed.id); return; }
-    openedSeeds.add(i);
-    const seed = SEEDS[i];
-    const s = {
-      id: 'seed' + i,
-      title: seed.title,
-      messages: [{ role: 'user', text: seed.user }, { role: 'ai', reply: seed }],
-    };
-    sessions.unshift(s);
-    currentId = s.id;
-    rebuildFeed();
-    showView('chat');
-    renderMenu();
+    let existed = sessions.find((session) => session.id === 'seed' + i);
+    if (!existed) { const seed = SEEDS[i]; existed = { id: 'seed' + i, title: seed.title, messages: [{ role: 'user', text: seed.user }, { role: 'ai', reply: seed }] }; sessions.push(existed); }
+    openSession(existed.id);
   }
 
   function rebuildFeed() {
@@ -1810,6 +1993,7 @@
         nodes.forEach((n, i) => { const state = m.reply.steps[i].state || 'done'; n.className = 'step-item ' + state; n.querySelector('.st-ic').textContent = state === 'done' ? '✓' : state === 'running' ? '◌' : '○'; });
         sh.answer.textContent = m.reply.answer;
         if (m.reply.doc) sh.block.insertBefore(docCard(m.reply.doc), sh.reco);
+        if (m.reply.urlDoc) sh.block.insertBefore(urlCard(m.reply.urlDoc), sh.reco);
         if (!m.reply.streaming) renderActions(sh.block, m.reply.answer);
         if (m.reply.reco) renderReco(sh.reco, m.reply.reco);
       }
@@ -1843,6 +2027,25 @@
   /* ---------- 初始化 ---------- */
   function init() {
     window.addEventListener('message', handlePreviewMessage);
+    window.addEventListener('storage', (event) => { if (Object.values(MINI_VISIBILITY_KEYS).includes(event.key)) applyMiniVisibility(); });
+    if (!previewId) {
+      const history = MENU.find((group) => group.dynamic);
+      (history.items || []).forEach((item, index) => { const seed = SEEDS[item.seed]; sessions.push({ id: 'seed' + item.seed, title: seed.title,
+        lastSentAt: Date.now() - (index + 1) * 3600000, messages: [{ role: 'user', text: seed.user }, { role: 'ai', reply: seed }] }); });
+    }
+    ComposerTools.init({ toast, isMini: (context) => context === 'chat' && isMini(), onFiles: (context, files) => {
+      if (context === 'home') { homeFiles = mergeFiles(homeFiles, files); renderHomeFiles(); }
+      else if (context === 'docspace') Docspace.addFiles(files);
+      else if (context === 'canvas') files.forEach(openCanvasTab);
+      else { const session = currentSession(); if (session) { session.draftFiles = mergeFiles(session.draftFiles || [], files); renderChatFiles(); } }
+    } });
+    const replyPositionObserver = new ResizeObserver(() => {
+      const height = $('#canvas-float-composer').offsetHeight;
+      $('#canvas-float-reply').style.bottom = (44 + height + 8) + 'px';
+    });
+    replyPositionObserver.observe($('#canvas-float-composer'));
+    const sessionObserver = new MutationObserver(() => { queuePreviewPublish(); renderWorkbench(); });
+    ['#feed', '#fr-stream'].forEach((selector) => sessionObserver.observe($(selector), { childList: true, subtree: true, characterData: true }));
     renderMenu();
     renderCards();
     initTabs();
@@ -1854,18 +2057,26 @@
     $('#btn-space').onclick = () => showView('space');
     $('#btn-back-chat').onclick = () => showView(currentId ? 'chat' : 'home');
     initSelection();
-    $('#home-plus').onclick = () => toast('原型演示：附件上传暂未接入');
+
 
     // Canvas 面板按钮
-    $('#btn-canvas-close').onclick = () => closeCanvas();
+    $('#btn-canvas-add').onclick = () => ComposerTools.openPicker('canvas');
+    $('#btn-canvas-restore').onclick = restoreCanvas;
+    $('#canvas-tabs').onkeydown = (e) => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Delete'].includes(e.key)) return;
+      const st = canvasState(); if (!st) return;
+      e.preventDefault();
+      if (e.key === 'Delete') { closeCanvasTab(st.activeId); return; }
+      const ids = [...(previewId ? [] : [WORKBENCH_TAB_ID]), ...st.tabs.map((doc) => doc.id)];
+      const index = ids.indexOf(st.activeId);
+      const next = e.key === 'Home' ? 0 : e.key === 'End' ? ids.length - 1 : (index + (e.key === 'ArrowRight' ? 1 : -1) + ids.length) % ids.length;
+      activateCanvasTab(ids[next]);
+      [...$('#canvas-tabs').children].find((tab) => tab.dataset.tabId === st.activeId)?.focus();
+    };
     $('#btn-canvas-expand').onclick = () => {
       setFullscreen(!$('.main').classList.contains('canvas-full'));
     };
-    $('#btn-canvas-sidebar').onclick = () => {
-      // 收起/展开左侧栏：Canvas 获得全部宽度
-      $('.sidebar').hidden = !$('.sidebar').hidden;
-      $('.window').classList.toggle('sidebar-collapsed');
-    };
+    $('#btn-canvas-sidebar').onclick = collapseCanvas;
     $('#btn-canvas-share').onclick = () => toast('原型演示：文档分享暂未接入');
     $('#btn-canvas-download').onclick = () => toast('原型演示：文档下载暂未接入');
     $('#btn-canvas-more').onclick = () => toast('原型演示：更多操作暂未接入');
@@ -1921,16 +2132,8 @@
     $('#fr-collapse').onclick = () => setFloatCollapsed(true);
     $('#fr-expand').onclick = () => setFloatCollapsed(false);
     // 全屏输入框隐藏/显示（收起条跟随一起隐藏）
-    $('#fc-hide').onclick = () => {
-      $('#canvas-float-composer').classList.add('fc-hidden');
-      $('#canvas-float-reply').classList.add('fc-hidden');
-      $('#canvas-float-showzone').hidden = false;
-    };
-    $('#fc-show').onclick = () => {
-      $('#canvas-float-composer').classList.remove('fc-hidden');
-      $('#canvas-float-reply').classList.remove('fc-hidden');
-      $('#canvas-float-showzone').hidden = true;
-    };
+    $('#fc-hide').onclick = () => setMiniVisible(false);
+    $('#fc-show').onclick = () => setMiniVisible(true);
     // 方案 B/C：hover 发送按钮出操作提示
     const sendTip = $('#send-tip');
     $('#sel-pop-send').addEventListener('mouseenter', () => {
@@ -1964,8 +2167,7 @@
       $$('.preview-open-icon').forEach((host) => host.innerHTML = DOCSPACE_INLINE_ICONS.arrow_right_s);
       $('#btn-preview-add-chat').onclick = () => { saveCanvasEdits(); previewPost('preview-add-chat', { doc: JSON.parse(JSON.stringify(displayedDoc)) }); };
       $$('.preview-open-chat').forEach((button) => button.onclick = () => { publishPreview(); previewPost('preview-open-chat', { sessionId: currentId, messageId: previewMessageId }); });
-      const observer = new MutationObserver(queuePreviewPublish);
-      ['#feed', '#fr-stream'].forEach((selector) => observer.observe($(selector), { childList: true, subtree: true, characterData: true }));
+
       applyPreviewMode(); previewPost('preview-ready');
       $('#btn-canvas-save').onclick = () => { saveCanvasEdits(); toast('预览中的修改已保留'); };
       return;
@@ -2001,7 +2203,7 @@
     });
 
     // 默认打开演示会话（含文档/演示/表格三条生成记录）
-    const demo = { id: 'demo', title: DEMO_SEED.title, messages: DEMO_SEED.messages };
+    const demo = { id: 'demo', title: DEMO_SEED.title, messages: DEMO_SEED.messages, lastSentAt: Date.now() - 1800000 };
     sessions.unshift(demo);
     currentId = demo.id;
     rebuildFeed();

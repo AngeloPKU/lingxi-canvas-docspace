@@ -4,9 +4,11 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const asset = (name) => 'assets/docspace/' + name + '.svg';
   const icon = (name, cls = '') => `<span class="ds-icon-slot ${cls}"><img src="${asset(name)}" alt=""></span>`;
-  const FILE_ICONS = { folder: '42-10698-imgFolderFormat24', docx: '42-11057-imgWpsFormat24', xlsx: '42-11016-imgEtFormat24', pptx: '42-11137-imgWppFormat24', app: 'window_unhide_24' };
+  const FILE_ICONS = { folder: '42-10698-imgFolderFormat24', docx: '42-11057-imgWpsFormat24', xlsx: '42-11016-imgEtFormat24', pptx: '42-11137-imgWppFormat24', image: '../icons/pic', app: 'window_unhide_24' };
   const NAMES = { cloud: '云端产物', local: '本地产物', shared: '文档分享', apps: '网页应用', recent: '最近打开', mydocs: '我的文档' };
+  const documentCache = new Map();
   const items = [
+    { id: 'cloud-image', parent: 'cloud', type: 'image', name: '团队协作流程图.svg', time: '今天 15:08', size: '4 KB', order: 1508, topic: '团队协作流程图' },
     { id: 'cloud-project', parent: 'cloud', type: 'folder', name: '新手引导重构方案 2026年6月', time: '今天 15:19', size: '1368 KB', order: 1519 },
     { id: 'cloud-design', parent: 'cloud', type: 'folder', name: '灵犀AI设计组', time: '今天 15:19', size: '1368 KB', order: 1519 },
     { id: 'cloud-dev', parent: 'cloud', type: 'folder', name: '云端开发小组', time: '今天 15:45', size: '512 KB', order: 1545 },
@@ -30,13 +32,15 @@
     { id: 'my-plan', parent: 'my-project', type: 'docx', name: '文档空间迭代计划.docx', time: '今天 13:20', size: '512 KB', order: 1320, topic: '文档空间迭代计划' },
     { id: 'app-dashboard', parent: 'apps', type: 'app', name: '新手引导数据看板', time: '今天 15:06', size: '网页应用', order: 1506 },
   ];
-  const state = { location: 'cloud', expanded: new Set(['lingxi', 'wps']), tabs: [], active: 'space', filter: 'all', sort: 0, deleted: new Set(), selected: new Set(), recent: ['cloud-report', 'cloud-funnel', 'my-note'] };
+  const state = { location: 'cloud', expanded: new Set(['lingxi', 'wps']), tabs: [], active: 'space', filter: 'all', sort: 0, deleted: new Set(), selected: new Set(), uploads: [], recent: ['cloud-report', 'cloud-funnel', 'my-note'] };
   let callbacks = { toast: () => {} };
-  const runningPreviews = new Set();
   const foldersIn = (id) => items.filter((i) => i.parent === id && i.type === 'folder' && !state.deleted.has(i.id));
   const find = (id) => items.find((i) => i.id === id);
 
   function makePreviewDoc(id) {
+    if (documentCache.has(id)) return JSON.parse(JSON.stringify(documentCache.get(id)));
+    const uploaded = MockFiles.make(id);
+    if (uploaded) return uploaded;
     const item = find(id);
     if (!item || !DOC_TEMPLATES[item.type]) return null;
     const tpl = DOC_TEMPLATES[item.type];
@@ -71,7 +75,7 @@
       const item = find(id);
       const node = document.createElement('div');
       node.className = 'ds-tab' + (state.active === id ? ' active' : '');
-      const tabIcon = { docx: 'wps_format_s', xlsx: 'et_format_s', pptx: 'wpp_format_s', app: 'doc_file' }[item.type];
+      const tabIcon = { docx: 'wps_format_s', xlsx: 'et_format_s', pptx: 'wpp_format_s', image: 'pic', app: 'doc_file' }[item.type];
       node.innerHTML = `<button class="ds-tab-select" role="tab" id="ds-tab-${id}" aria-selected="${state.active === id}" aria-controls="ds-preview-${id}" tabindex="${state.active === id ? 0 : -1}" title="${esc(item.name)}"><span class="ds-icon-slot"><img src="assets/icons/${tabIcon}.svg" width="16" height="16" alt=""></span><span>${esc(item.name)}</span></button><button class="ds-tab-close" aria-label="关闭 ${esc(item.name)}" title="关闭标签"><img src="assets/docspace/symbol_cross_two.svg" width="16" height="16" alt=""></button>`;
       node.querySelector('.ds-tab-select').onclick = () => activate(id);
       node.querySelector('.ds-tab-close').onclick = () => closeTab(id);
@@ -85,7 +89,7 @@
     state.active = id;
     $('#ds-workspace').hidden = id !== 'space';
     $('#ds-previews').hidden = id === 'space';
-    document.querySelectorAll('.ds-preview').forEach((p) => p.hidden = p.dataset.id !== id);
+    document.querySelectorAll('.ds-preview').forEach((p) => p.hidden = p.dataset.id !== id || p.dataset.retired === 'true');
     renderTabs();
     const active = $('#ds-tabs [aria-selected="true"]');
     active?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -96,7 +100,7 @@
     if (index < 0) return;
     state.tabs.splice(index, 1);
     const panel = $('#ds-preview-' + id);
-    if (runningPreviews.has(id)) { if (panel) panel.hidden = true; }
+    if (panel?.dataset.running === 'true') { panel.hidden = true; panel.dataset.retired = 'true'; panel.id = 'ds-retired-' + panel.dataset.instance; }
     else panel?.remove();
     if (state.active === id) activate(state.tabs[Math.min(index, state.tabs.length - 1)] || 'space');
     else renderTabs();
@@ -110,13 +114,14 @@
       if ($('#ds-preview-' + item.id)) { activate(item.id); return; }
       const panel = document.createElement('section');
       panel.className = 'ds-preview'; panel.id = 'ds-preview-' + item.id; panel.dataset.id = item.id;
+      panel.dataset.instance = 'P' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       panel.setAttribute('role', 'tabpanel'); panel.setAttribute('aria-labelledby', 'ds-tab-' + item.id);
       panel.innerHTML = '<div class="ds-preview-loading">正在加载预览…</div>';
       const frame = document.createElement('iframe');
       frame.title = item.name + ' · Canvas 预览';
       frame.onload = () => panel.querySelector('.ds-preview-loading')?.remove();
       if (item.type === 'app') frame.srcdoc = appPreviewHtml();
-      else frame.src = 'index.html?preview=' + encodeURIComponent(item.id);
+      else frame.src = 'index.html?preview=' + encodeURIComponent(item.id) + '&instance=' + panel.dataset.instance;
       panel.appendChild(frame); $('#ds-previews').appendChild(panel);
     }
     state.recent = [item.id, ...state.recent.filter((id) => id !== item.id)].slice(0, 8);
@@ -231,30 +236,33 @@
   }
 
   function renderAttachments() {
-    const host = $('#ds-attachments'); host.innerHTML = '';
-    host.hidden = !state.selected.size;
-    [...state.selected].map(find).filter(Boolean).forEach((item) => {
-      const card = document.createElement('div'); card.className = 'ds-attachment'; card.dataset.id = item.id;
-      card.innerHTML = `<button class="ds-attachment-open" title="预览 ${esc(item.name)}"><img src="${asset(FILE_ICONS[item.type])}" alt=""><span class="ds-attachment-info"><span class="ds-attachment-name">${esc(item.name.replace(/\.[^.]+$/, ''))}</span><span class="ds-attachment-size">${esc(item.size)}</span></span></button><button class="ds-attachment-remove" aria-label="移除 ${esc(item.name)}" title="移除文件"><img src="assets/icons/symbol_cross_two.svg" width="16" height="16" alt=""></button>`;
-      card.querySelector('.ds-attachment-open').onclick = () => openFile(item);
-      card.querySelector('.ds-attachment-remove').onclick = () => { state.selected.delete(item.id); syncSelection(); renderAttachments(); };
-      host.appendChild(card);
-    });
+    const files = [...state.selected].map(makePreviewDoc).filter(Boolean).concat(state.uploads);
+    ComposerTools.renderFiles($('#ds-attachments'), files, { preview: true, onOpen: (doc) => openFile(find(doc.id)),
+      onRemove: (doc) => { state.selected.delete(doc.id); state.uploads = state.uploads.filter((f) => f.id !== doc.id); syncSelection(); renderAttachments(); } });
     updateSendIcon();
   }
 
+  function addFiles(files) {
+    files.forEach((doc) => {
+      if (!find(doc.id)) items.push({ ...doc, parent: 'uploaded', time: '今天', order: Date.now() });
+      documentCache.set(doc.id, doc);
+      if (!state.uploads.some((f) => f.id === doc.id) && !state.selected.has(doc.id)) state.uploads.push(doc);
+    });
+    renderAttachments();
+  }
+
   function updateSendIcon() {
-    const ready = state.selected.size || $('#ds-input').innerText.trim();
+    const ready = (state.selected.size || state.uploads.length) || $('#ds-input').innerText.trim();
     $('#ds-send').innerHTML = ready ? DOCSPACE_INLINE_ICONS.arrow_up_tail_s : '<img src="assets/icons/microphone.svg" width="16" height="16" alt="">';
   }
 
   function sendRequest() {
     const text = $('#ds-input').innerText.trim();
-    const files = [...state.selected].map(makePreviewDoc).filter(Boolean);
+    const files = [...new Map([...state.selected].map(makePreviewDoc).filter(Boolean).concat(state.uploads).map((doc) => [doc.id, doc])).values()];
     if (!text && !files.length) return;
     if (!callbacks.onSendRequest(text || '请查看这些文件', files)) return;
     $('#ds-input').textContent = '';
-    state.selected.clear(); syncSelection(); renderAttachments();
+    state.selected.clear(); state.uploads = []; syncSelection(); renderAttachments();
   }
 
   function renderRows() {
@@ -271,7 +279,7 @@
       host.appendChild(row);
     });
     if (!visible.length) host.innerHTML = '<div class="ds-empty"><span class="ds-empty-title">这里暂时没有文件</span><span>可以切换目录或文件类型查看其他内容</span></div>';
-    $('#ds-filter span').textContent = { all: '全部类型', folder: '文件夹', docx: '文字文档', xlsx: '表格', pptx: '演示文稿', app: '网页应用' }[state.filter];
+    $('#ds-filter span').textContent = { all: '全部类型', folder: '文件夹', docx: '文字文档', xlsx: '表格', pptx: '演示文稿', image: '图片', app: '网页应用' }[state.filter];
     syncSelection();
   }
 
@@ -323,10 +331,10 @@
     $('#ds-input').addEventListener('input', updateSendIcon);
     $('#ds-input').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendRequest(); } });
     $('#ds-send').onclick = sendRequest;
-    $('#ds-plus').onclick = () => callbacks.toast('可勾选列表中的文件添加到任务');
+
     $('#ds-filter').onclick = (e) => {
       if (!$('#ds-popup').hidden) { hidePopup(); return; }
-      const filters = [['all', '全部类型'], ['folder', '文件夹'], ['docx', '文字文档'], ['xlsx', '表格'], ['pptx', '演示文稿'], ['app', '网页应用']];
+      const filters = [['all', '全部类型'], ['folder', '文件夹'], ['docx', '文字文档'], ['xlsx', '表格'], ['pptx', '演示文稿'], ['image', '图片'], ['app', '网页应用']];
       showPopup(e.currentTarget, `<div class="kd-menu" role="presentation">${filters.map(([id, name]) => `<button class="kd-menu-item" role="menuitemradio" aria-checked="${id === state.filter}" data-filter="${id}"><span class="kd-menu-item-content">${name}</span></button>`).join('')}</div>`);
       $('#ds-filter').setAttribute('aria-expanded', 'true');
       $('#ds-popup').querySelectorAll('[data-filter]').forEach((b) => b.onclick = () => { state.filter = b.dataset.filter; hidePopup(); renderRows(); $('#ds-filter').focus(); });
@@ -353,12 +361,16 @@
   }
 
   window.Docspace = {
-    init, makePreviewDoc, hidePopup,
+    init, makePreviewDoc, hidePopup, addFiles,
+    cacheDoc: (doc) => documentCache.set(doc.id, JSON.parse(JSON.stringify(doc))),
+    previewInstance: (source) => [...document.querySelectorAll('.ds-preview iframe')].find((f) => f.contentWindow === source)?.parentElement.dataset.instance,
+    broadcastVisibility: (visible) => document.querySelectorAll('.ds-preview iframe').forEach((f) => f.contentWindow.postMessage({ channel: 'lingxi-docspace', type: 'composer-visibility', visible }, '*')),
+    updatePreviewSession: (session) => { const doc = session.contextFiles?.find((d) => d.id === session.previewSource); if (doc) documentCache.set(doc.id, JSON.parse(JSON.stringify(doc))); const panel = [...document.querySelectorAll('.ds-preview')].find((p) => p.dataset.instance === session.previewInstance && p.dataset.retired !== 'true'); panel?.querySelector('iframe')?.contentWindow.postMessage({ channel: 'lingxi-docspace', type: 'session-sync', session: JSON.parse(JSON.stringify(session)) }, '*'); },
     open: () => { callbacks.onOpen(); hidePopup(); },
     openPreview: (id) => { const item = find(id); if (item) { callbacks.onOpen(); openFile(item); } },
     previewSource: (source) => [...document.querySelectorAll('.ds-preview iframe')].find((frame) => frame.contentWindow === source)?.parentElement.dataset.id,
     broadcastMode: (enabled) => document.querySelectorAll('.ds-preview iframe').forEach((frame) => frame.contentWindow.postMessage({ channel: 'lingxi-docspace', type: 'preview-mode', enabled }, '*')),
-    updatePreviewDoc: (doc) => $('#ds-preview-' + doc.id + ' iframe')?.contentWindow.postMessage({ channel: 'lingxi-docspace', type: 'preview-doc', doc: JSON.parse(JSON.stringify(doc)) }, '*'),
-    setPreviewRunning: (id, active) => { if (active) runningPreviews.add(id); else { runningPreviews.delete(id); if (!state.tabs.includes(id)) $('#ds-preview-' + id)?.remove(); } },
+    updatePreviewDoc: (doc) => { documentCache.set(doc.id, JSON.parse(JSON.stringify(doc))); $('#ds-preview-' + doc.id + ' iframe')?.contentWindow.postMessage({ channel: 'lingxi-docspace', type: 'preview-doc', doc: JSON.parse(JSON.stringify(doc)) }, '*'); },
+    setPreviewRunning: (instance, active) => { const panel = [...document.querySelectorAll('.ds-preview')].find((p) => p.dataset.instance === instance); if (panel) { panel.dataset.running = String(active); if (!active && panel.dataset.retired === 'true') panel.remove(); } },
   };
 })();
